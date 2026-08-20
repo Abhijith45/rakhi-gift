@@ -1,0 +1,138 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String?  @unique
+  name      String?
+  phone     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  gifts     Gift[]
+}
+
+model Gift {
+  id                String           @id @default(uuid())
+  userId            String?
+  user              User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
+  slug              String?          @unique
+  senderName        String
+  recipientName     String
+  relationship      String           @default("Brother") // Brother or Sister
+  senderNickname    String?
+  recipientNickname String?
+  theme             String           @default("warm-memory") // warm-memory, playful-childhood, elegant-minimal, traditional-rakhi
+  message           String           @db.Text
+  plan              String           @default("PREMIUM") // BASIC, PREMIUM, DELUXE
+  status            String           @default("DRAFT") // DRAFT, PAYMENT_PENDING, PAID, ACTIVE, DISABLED, EXPIRED
+  
+  // Surprise reveal fields
+  surpriseBadge     String?          @default("A Little Surprise For You")
+  surpriseTitle     String?          @default("One Last Promise...")
+  surpriseMessage   String?          @db.Text
+  surpriseVoucher   String?
+  surpriseNote      String?
+  
+  viewCount         Int              @default(0)
+  publishedAt       DateTime?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  photos            GiftPhoto[]
+  reasons           GiftReason[]
+  memories          GiftMemory[]
+  payments          Payment[]
+  analytics         AnalyticsEvent[]
+
+  @@index([slug])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model GiftPhoto {
+  id                 String   @id @default(uuid())
+  giftId             String
+  gift               Gift     @relation(fields: [giftId], references: [id], onDelete: Cascade)
+  url                String   @db.Text
+  thumbnailUrl       String?  @db.Text
+  cloudinaryPublicId String?
+  caption            String?
+  date               String?
+  displayOrder       Int      @default(0)
+  aspectRatio        Float    @default(1.333)
+  width              Int?     @default(1600)
+  height             Int?     @default(1200)
+  frameVariant       String?  @default("classic") // classic, caption, note
+  createdAt          DateTime @default(now())
+
+  @@index([giftId])
+  @@index([displayOrder])
+}
+
+model GiftReason {
+  id           String   @id @default(uuid())
+  giftId       String
+  gift         Gift     @relation(fields: [giftId], references: [id], onDelete: Cascade)
+  number       String?
+  title        String
+  text         String   @db.Text
+  displayOrder Int      @default(0)
+
+  @@index([giftId])
+}
+
+model GiftMemory {
+  id           String   @id @default(uuid())
+  giftId       String
+  gift         Gift     @relation(fields: [giftId], references: [id], onDelete: Cascade)
+  date         String
+  title        String
+  description  String   @db.Text
+  displayOrder Int      @default(0)
+
+  @@index([giftId])
+}
+
+model Payment {
+  id                String    @id @default(uuid())
+  giftId            String
+  gift              Gift      @relation(fields: [giftId], references: [id], onDelete: Cascade)
+  plan              String
+  amount            Int // in INR (e.g. 249)
+  currency          String    @default("INR")
+  status            String    @default("CREATED") // CREATED, PENDING, PAID, FAILED, REFUNDED
+  razorpayOrderId   String    @unique
+  razorpayPaymentId String?
+  razorpaySignature String?
+  webhookEventId    String?
+  webhookReceivedAt DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @default(now()) @updatedAt
+  paidAt            DateTime?
+
+  @@index([giftId])
+  @@index([status])
+  @@index([razorpayOrderId])
+  @@index([webhookEventId])
+}
+
+model AnalyticsEvent {
+  id        String   @id @default(uuid())
+  giftId    String?
+  gift      Gift?    @relation(fields: [giftId], references: [id], onDelete: SetNull)
+  event     String   // landing_view, create_started, preview_viewed, payment_started, payment_success, gift_viewed, surprise_revealed, share_clicked, whatsapp_share_clicked
+  sessionId String?
+  device    String?  // mobile, tablet, desktop
+  referrer  String?
+  createdAt DateTime @default(now())
+
+  @@index([event])
+  @@index([giftId])
+  @@index([createdAt])
+}
