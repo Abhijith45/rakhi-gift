@@ -1,0 +1,257 @@
+/**
+ * Theme Tokens & Visual Scoping Stylesheet
+ * Applies theme-specific CSS variables, typography, and texture accents.
+ */
+
+:root {
+  /* Default Warm Memory Theme Tokens */
+  --gift-bg: #FAF7F2;
+  --gift-surface: #FFFDF9;
+  --gift-canvas: #F5EFEB;
+  --gift-card: #FFFDF9;
+  --gift-elevated: #FFFFFF;
+  --gift-text: #1E1B18;
+  --gift-text-secondary: #59524C;
+  --gift-text-muted: #8C827A;
+  --gift-accent: #9B2226;
+  --gift-accent-hover: #7D1B1E;
+  --gift-accent-light: #FBF0EF;
+  --gift-accent-muted: rgba(155, 34, 38, 0.08);
+  --gift-accent-secondary: #D96B43;
+  --gift-gold: #C69234;
+  --gift-gold-light: #FDF6E2;
+  --gift-gold-dark: #8F6517;
+  --gift-gold-muted: rgba(198, 146, 52, 0.12);
+  --gift-border: #E5D9C8;
+  --gift-border-subtle: #EFE6D8;
+  --gift-border-gold: #D4AF37;
+  --gift-shadow-tone: rgba(45, 30, 15, 0.08);
+  --gift-card-shadow: 0 8px 24px -4px rgba(45, 30, 15, 0.08), 0 2px 6px -1px rgba(45, 30, 15, 0.04);
+
+  --gift-font-heading: 'Playfair Display', Georgia, serif;
+  --gift-font-body: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --gift-font-accent: 'Playfair Display', Georgia, italic;
+
+  --gift-thread: #A3242A;
+  --gift-thread-glow: rgba(163, 36, 42, 0.45);
+  --gift-pin: #D4AF37;
+  --gift-pin-highlight: #FFF8C6;
+  --gift-frame-bg: #FFFDF9;
+  --gift-frame-border: #E5D9C8;
+
+  --gift-seal-bg: linear-gradient(135deg, #B5282D 0%, #83181B 100%);
+  --gift-seal-border: #D4AF37;
+  --gift-seal-text: #FFFDF9;
+  --gift-tag-bg: #FBF0EF;
+  --gift-tag-color: #9B2226;
+  --gift-tag-border: rgba(155, 34, 38, 0.15);
+  --gift-accent-glow: rgba(155, 34, 38, 0.15);
+}
+
+/* ==========================================================================
+   THEME: WARM MEMORY (Cozy, Nostalgic, Handcrafted)
+   ========================================================================== */
+[data-theme="warm-memory"] {
+  --gift-bg: #FAF7F2;
+  --gift-surface: #FFFDF9;
+  --gift-canvas: #F5EFEB;
+  --gift-card: #FFFDF9;
+  --gift-elevated: #FFFFFF;
+  --gift-text: #1E1B18;
+  --gift-text-secondary: #59524C;
+  --gift-text-muted: #8C827A;
+  --gift-accent: #9B2226;
+  --gift-accent-hover: #7D1B1E;
+  --gift-accent-light: #FBF0EF;
+  --gift-accent-muted: rgba(155, 34, 38, 0.08);
+  --gift-accent-secondary: #D96B43;
+  --gift-gold: #C69234;
+  --gift-gold-light: #FDF6E2;
+  --gift-gold-dark: #8F6517;
+  --gift-gold-muted: rgba(198, 146, 52, 0.12);
+  --gift-border: #E5D9C8;
+  --gift-border-subtle: #EFE6D8;
+  --gift-border-gold: #D4AF37;
+
+  --gift-font-heading: 'Playfair Display', Georgia, serif;
+  --gift-font-body: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --gift-font-accent: 'Playfair Display', Georgia, italic;
+
+  --gift-thread: #A3242A;
+  --gift-thread-glow: rgba(163, 36, 42, 0.45);
+  --gift-pin: #D4AF37;
+  --gift-pin-highlight: #FFF8C6;
+  --gift-frame-bg: #FFFDF9;
+  --gift-frame-border: #E5D9C8;
+
+  --gift-seal-bg: linear-gradient(135deg, #B5282D 0%, #83181B 100%);
+  --gift-seal-border: #D4AF37;
+  --gift-seal-text: #FFFDF9;
+  --gift-tag-bg: #FBF0EF;
+  --gift-tag-color: #9B2226;
+  --gift-tag-border: rgba(155, 34, 38, 0.15);
+  --gift-accent-glow: rgba(155, 34, 38, 0.15);
+}
+
+/* ==========================================================================
+   THEME: PLAYFUL CHILDHOOD (Bright, Cheerful, Rounded, Coral & Gold)
+   ========================================================================== */
+[data-theme="playful-childhood"] {
+  --gift-bg: #FFF9F5;
+  --gift-surface: #FFFFFF;
+  --gift-canvas: #FCEEE5;
+  --gift-card: #FFFFFF;
+  --gift-elevated: #FFFFFF;
+  --gift-text: #261914;
+  --gift-text-secondary: #634D44;
+  --gift-text-muted: #947B72;
+  --gift-accent: #D9532F;
+  --gift-accent-hover: #BA3E1C;
+  --gift-accent-light: #FFF0EA;
+  --gift-accent-muted: rgba(217, 83, 47, 0.08);
+  --gift-accent-secondary: #2A8F94;
+  --gift-gold: #E09F3E;
+  --gift-gold-light: #FFF4DE;
+  --gift-gold-dark: #996312;
+  --gift-gold-muted: rgba(224, 159, 62, 0.14);
+  --gift-border: #F5D8C7;
+  --gift-border-subtle: #FAECE3;
+  --gift-border-gold: #E09F3E;
+
+  --gift-font-heading: 'Outfit', 'Plus Jakarta Sans', sans-serif;
+  --gift-font-body: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --gift-font-accent: 'Outfit', sans-serif;
+
+  --gift-thread: #E04828;
+  --gift-thread-glow: rgba(224, 72, 40, 0.5);
+  --gift-pin: #E09F3E;
+  --gift-pin-highlight: #FFE7B3;
+  --gift-frame-bg: #FFFFFF;
+  --gift-frame-border: #F2D2BF;
+
+  --gift-seal-bg: linear-gradient(135deg, #E65A35 0%, #BD3B17 100%);
+  --gift-seal-border: #E09F3E;
+  --gift-seal-text: #FFFFFF;
+  --gift-tag-bg: #FFF0EA;
+  --gift-tag-color: #D9532F;
+  --gift-tag-border: rgba(217, 83, 47, 0.18);
+  --gift-accent-glow: rgba(217, 83, 47, 0.18);
+}
+
+/* ==========================================================================
+   THEME: ELEGANT MINIMAL (Quiet, Sophisticated, Editorial, Pure Stone)
+   ========================================================================== */
+[data-theme="elegant-minimal"] {
+  --gift-bg: #F8F6F0;
+  --gift-surface: #FCFBF8;
+  --gift-canvas: #EFECE4;
+  --gift-card: #FCFBF8;
+  --gift-elevated: #FFFFFF;
+  --gift-text: #171615;
+  --gift-text-secondary: #5C5954;
+  --gift-text-muted: #8A8680;
+  --gift-accent: #6B2D3A;
+  --gift-accent-hover: #521F2A;
+  --gift-accent-light: #F5ECEE;
+  --gift-accent-muted: rgba(107, 45, 58, 0.08);
+  --gift-accent-secondary: #4A5568;
+  --gift-gold: #B58A3E;
+  --gift-gold-light: #F7F1E4;
+  --gift-gold-dark: #78571F;
+  --gift-gold-muted: rgba(181, 138, 62, 0.12);
+  --gift-border: #DFDACF;
+  --gift-border-subtle: #EBE7DE;
+  --gift-border-gold: #C29B48;
+
+  --gift-font-heading: 'Cinzel', Georgia, serif;
+  --gift-font-body: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --gift-font-accent: 'Cinzel', Georgia, serif;
+
+  --gift-thread: #7A2E3D;
+  --gift-thread-glow: rgba(122, 46, 61, 0.4);
+  --gift-pin: #C29B48;
+  --gift-pin-highlight: #F5E6BE;
+  --gift-frame-bg: #FCFBF8;
+  --gift-frame-border: #DFDACF;
+
+  --gift-seal-bg: linear-gradient(135deg, #7A2E3D 0%, #4D1A24 100%);
+  --gift-seal-border: #C29B48;
+  --gift-seal-text: #FCFBF8;
+  --gift-tag-bg: #F5ECEE;
+  --gift-tag-color: #6B2D3A;
+  --gift-tag-border: rgba(107, 45, 58, 0.15);
+  --gift-accent-glow: rgba(107, 45, 58, 0.12);
+}
+
+/* ==========================================================================
+   THEME: TRADITIONAL RAKHI (Regal, Indian Auspicious Maroon & Antique Gold)
+   ========================================================================== */
+[data-theme="traditional-rakhi"] {
+  --gift-bg: #FDF5F2;
+  --gift-surface: #FFF9F7;
+  --gift-canvas: #F7E6E0;
+  --gift-card: #FFF9F7;
+  --gift-elevated: #FFFFFF;
+  --gift-text: #1F1415;
+  --gift-text-secondary: #5C4648;
+  --gift-text-muted: #8F7578;
+  --gift-accent: #8B1E22;
+  --gift-accent-hover: #6E1417;
+  --gift-accent-light: #FAEBE9;
+  --gift-accent-muted: rgba(139, 30, 34, 0.09);
+  --gift-accent-secondary: #D9602B;
+  --gift-gold: #D4AF37;
+  --gift-gold-light: #FCF7E6;
+  --gift-gold-dark: #8F7118;
+  --gift-gold-muted: rgba(212, 175, 55, 0.15);
+  --gift-border: #EACDC5;
+  --gift-border-subtle: #F4DDD6;
+  --gift-border-gold: #D4AF37;
+
+  --gift-font-heading: 'Marcellus', 'Playfair Display', serif;
+  --gift-font-body: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --gift-font-accent: 'Marcellus', 'Playfair Display', serif;
+
+  --gift-thread: #941B1F;
+  --gift-thread-glow: rgba(148, 27, 31, 0.55);
+  --gift-pin: #D4AF37;
+  --gift-pin-highlight: #FFF5BD;
+  --gift-frame-bg: #FFF9F7;
+  --gift-frame-border: #EACDC5;
+
+  --gift-seal-bg: linear-gradient(135deg, #A12227 0%, #6E1215 100%);
+  --gift-seal-border: #D4AF37;
+  --gift-seal-text: #FFFDF9;
+  --gift-tag-bg: #FAEBE9;
+  --gift-tag-color: #8B1E22;
+  --gift-tag-border: rgba(139, 30, 34, 0.2);
+  --gift-accent-glow: rgba(139, 30, 34, 0.2);
+}
+
+/* Global Paper Card utility with theme token consumption */
+.paper-card {
+  background: var(--gift-card, #FFFDF9) !important;
+  border-color: var(--gift-border, #E5D9C8) !important;
+  color: var(--gift-text, #1E1B18);
+  box-shadow: var(--gift-card-shadow, 0 8px 24px -4px rgba(45, 30, 15, 0.08));
+}
+
+/* Theme Background Styling */
+.public-gift-root,
+.preview-wall-box {
+  background-color: var(--gift-bg, #FAF7F2);
+  color: var(--gift-text, #1E1B18);
+  font-family: var(--gift-font-body, 'Plus Jakarta Sans', sans-serif);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.public-gift-root h1,
+.public-gift-root h2,
+.public-gift-root h3,
+.public-gift-root .font-heading,
+.preview-wall-box h1,
+.preview-wall-box h2,
+.preview-wall-box h3,
+.preview-wall-box .font-heading {
+  font-family: var(--gift-font-heading, 'Playfair Display', Georgia, serif);
+}

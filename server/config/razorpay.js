@@ -3,7 +3,15 @@ import crypto from 'crypto';
 
 const keyId = process.env.RAZORPAY_KEY_ID;
 const keySecret = process.env.RAZORPAY_KEY_SECRET;
-const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET || 'webhook_mock_secret_2026';
+const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
+
+if (!keyId || !keySecret) {
+  console.warn('[Razorpay] WARNING: RAZORPAY_KEY_ID or RAZORPAY_KEY_SECRET is not configured. Payment features will be unavailable.');
+}
+
+if (!webhookSecret) {
+  console.warn('[Razorpay] WARNING: RAZORPAY_WEBHOOK_SECRET is not configured. Webhook signature verification will fail.');
+}
 
 export const razorpayInstance = keyId && keySecret
   ? new Razorpay({
@@ -14,83 +22,94 @@ export const razorpayInstance = keyId && keySecret
 
 /**
  * Server-Side Plan Pricing Config (Single Source of Truth)
- * Never trusts arbitrary client-supplied payment amounts.
+ * Amount is determined ONLY here — the client cannot override it.
+ * Minimum Razorpay amount is ₹1 = 100 paise.
  */
 export const PLAN_PRICING = {
   BASIC: {
     plan: 'BASIC',
-    amount: 99, // in INR
+    amount: 99,       // INR — 9900 paise (above 100 paise minimum)
     name: 'Basic Keepsake',
+    description: 'A heartfelt digital card with sweet memories.',
     maxPhotos: 6
   },
   PREMIUM: {
     plan: 'PREMIUM',
-    amount: 249, // in INR
+    amount: 249,      // INR — 24900 paise
     name: 'Premium Memory Wall',
+    description: 'Our most loved gift — a complete emotional digital keepsake.',
     maxPhotos: 8
   },
   DELUXE: {
     plan: 'DELUXE',
-    amount: 449, // in INR
+    amount: 449,      // INR — 44900 paise
     name: 'Deluxe Keepsake Hamper',
+    description: 'The ultimate sibling tribute with extended timeline and audio.',
     maxPhotos: 8
   }
 };
 
 /**
- * Creates a Razorpay payment order on the backend
+ * Creates a Razorpay Standard Checkout order on the backend.
+ * Amount is always resolved server-side from PLAN_PRICING — never from client input.
+ * Reference: https://razorpay.com/docs/payments/payment-gateway/web-integration/standard/integration-steps/
  */
 export async function createRazorpayOrder({ plan = 'PREMIUM', receiptId, giftId }) {
   const planConfig = PLAN_PRICING[plan.toUpperCase()] || PLAN_PRICING.PREMIUM;
-  const amountInPaise = planConfig.amount * 100;
+  const amountInPaise = planConfig.amount * 100; // Razorpay requires amount in paise
 
-  if (razorpayInstance) {
-    try {
-      const order = await razorpayInstance.orders.create({
-        amount: amountInPaise,
-        currency: 'INR',
-        receipt: receiptId,
-        notes: {
-          giftId: giftId || '',
-          plan: planConfig.plan
-        }
-      });
-
-      return {
-        orderId: order.id,
-        amount: planConfig.amount,
-        currency: 'INR',
-        keyId: process.env.RAZORPAY_KEY_ID
-      };
-    } catch (err) {
-      console.error('Razorpay SDK orders.create error:', err);
-      // If network fails in local test environment, fallback to simulated test order
-    }
+  // Validate minimum amount (Razorpay requires >= 100 paise = ₹1)
+  if (amountInPaise < 100) {
+    throw new Error(`Invalid plan amount: ${amountInPaise} paise is below the minimum 100 paise.`);
   }
 
-  // Test Mode / Sandbox Order Fallback
-  const mockOrderId = `order_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
-  return {
-    orderId: mockOrderId,
-    amount: planConfig.amount,
-    currency: 'INR',
-    keyId: process.env.RAZORPAY_KEY_ID || 'rzp_test_TRuAuo1ZQLLoDH',
-    isSandbox: true
-  };
+  if (!razorpayInstance) {
+    throw new Error('Razorpay is not configured. Please set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET environment variables.');
+  }
+
+  try {
+    const order = await razorpayInstance.orders.create({
+      amount: amountInPaise,        // Server-locked amount — cannot be changed by client
+      currency: 'INR',
+      receipt: receiptId || `rcpt_${giftId?.substring(0, 8)}_${Date.now()}`,
+      notes: {
+        giftId: giftId || '',
+        plan: planConfig.plan,
+        planName: planConfig.name
+      }
+    });
+
+    console.log(`[Razorpay] Order created: ${order.id} | Plan: ${planConfig.plan} | Amount: ₹${planConfig.amount} (${amountInPaise} paise)`);
+
+    return {
+      orderId: order.id,
+      amount: planConfig.amount,  // In INR for display
+      amountInPaise,              // In paise — exact value locked by server
+      currency: 'INR',
+      keyId: process.env.RAZORPAY_KEY_ID,
+      planName: planConfig.name,
+      planDescription: planConfig.description
+    };
+  } catch (err) {
+    console.error('[Razorpay] orders.create failed:', err.message || err);
+    throw new Error(`Failed to create Razorpay order: ${err.error?.description || err.message || 'Unknown error'}`);
+  }
 }
 
 /**
- * Verifies Razorpay checkout payment signature
+ * Verifies Razorpay payment signature (Standard Checkout callback).
+ * Algorithm: HMAC-SHA256(orderId + "|" + paymentId, KEY_SECRET)
+ * Reference: https://razorpay.com/docs/payments/payment-gateway/web-integration/standard/integration-steps/#verify-payment-signature
  */
 export function verifyRazorpaySignature({ orderId, paymentId, signature }) {
   if (!keySecret) {
-    console.error('RAZORPAY_KEY_SECRET is not configured.');
+    console.error('[Razorpay] RAZORPAY_KEY_SECRET is not configured — cannot verify signature.');
     return false;
   }
 
-  // If simulated sandbox test signature
-  if (orderId.startsWith('order_') && signature?.startsWith('mock_sig_')) {
-    return true;
+  if (!orderId || !paymentId || !signature) {
+    console.error('[Razorpay] Missing orderId, paymentId, or signature for verification.');
+    return false;
   }
 
   const generatedSignature = crypto
@@ -98,15 +117,22 @@ export function verifyRazorpaySignature({ orderId, paymentId, signature }) {
     .update(`${orderId}|${paymentId}`)
     .digest('hex');
 
-  return generatedSignature === signature;
+  const isValid = generatedSignature === signature;
+  if (!isValid) {
+    console.warn(`[Razorpay] Signature mismatch for order ${orderId}. Expected: ${generatedSignature.substring(0, 16)}...`);
+  }
+
+  return isValid;
 }
 
 /**
- * Verifies Razorpay Webhook signature against raw request body
+ * Verifies Razorpay Webhook signature against the raw request body bytes.
+ * Uses RAZORPAY_WEBHOOK_SECRET (different from KEY_SECRET).
+ * Reference: https://razorpay.com/docs/webhooks/validate-test/
  */
 export function verifyWebhookSignature({ rawBody, signature }) {
   if (!webhookSecret) {
-    console.error('RAZORPAY_WEBHOOK_SECRET is not configured.');
+    console.error('[Razorpay] RAZORPAY_WEBHOOK_SECRET is not configured — cannot verify webhook.');
     return false;
   }
 
@@ -125,12 +151,15 @@ export function verifyWebhookSignature({ rawBody, signature }) {
 }
 
 /**
- * Helper to generate valid HMAC-SHA256 signature for given orderId and paymentId
+ * Generates a valid HMAC-SHA256 payment signature (used in tests and smoke tests).
+ * This is the same algorithm Razorpay uses on their side.
  */
 export function generatePaymentSignature(orderId, paymentId) {
-  const secret = process.env.RAZORPAY_KEY_SECRET || '7VfGb0n1yUbiUcKULVvK7yuJ';
+  if (!keySecret) {
+    throw new Error('[Razorpay] RAZORPAY_KEY_SECRET is required to generate signature.');
+  }
   return crypto
-    .createHmac('sha256', secret)
+    .createHmac('sha256', keySecret)
     .update(`${orderId}|${paymentId}`)
     .digest('hex');
 }
@@ -142,4 +171,3 @@ export default {
   verifyWebhookSignature,
   generatePaymentSignature
 };
-

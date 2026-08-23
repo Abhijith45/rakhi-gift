@@ -57,3 +57,6 @@ scratch/
 
 
 package-lock.json
+
+assets
+assets/*

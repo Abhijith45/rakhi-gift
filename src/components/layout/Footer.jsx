@@ -1,5 +1,6 @@
 import React from 'react';
 import { Heart, ShieldCheck, Sparkles } from 'lucide-react';
+import { Link } from '../../router';
 
 export const Footer = () => {
   return (
@@ -8,14 +9,14 @@ export const Footer = () => {
         <div className="footer-top">
           {/* Brand & Purpose */}
           <div className="footer-brand">
-            <div className="brand-logo footer-logo">
+            <Link to="/" className="brand-logo footer-logo" aria-label="Rakhi Gift Home">
               <div className="logo-emblem">
                 <div className="emblem-inner" />
               </div>
               <span className="logo-text">
                 Rakhi<span className="logo-accent">Gift</span>
               </span>
-            </div>
+            </Link>
             <p className="footer-desc">
               Transforming cherished sibling memories into an unforgettable, warm, and tactile digital keepsake.
             </p>
@@ -29,10 +30,10 @@ export const Footer = () => {
           <div className="footer-links-group">
             <h4 className="footer-group-title">Experience</h4>
             <ul className="footer-links">
-              <li><a href="#memory-wall">3D Memory Wall</a></li>
-              <li><a href="#how-it-works">How It Works</a></li>
-              <li><a href="#experience-preview">Recipient Preview</a></li>
-              <li><a href="#pricing">Gift Packages</a></li>
+              <li><a href="/#memory-wall">3D Memory Wall</a></li>
+              <li><a href="/#how-it-works">How It Works</a></li>
+              <li><a href="/#experience-preview">Recipient Preview</a></li>
+              <li><a href="/#pricing">Gift Packages</a></li>
             </ul>
           </div>
 
@@ -49,12 +50,12 @@ export const Footer = () => {
 
           {/* Support & Legal */}
           <div className="footer-links-group">
-            <h4 className="footer-group-title">Trust & Support</h4>
+            <h4 className="footer-group-title">Trust & Legal</h4>
             <ul className="footer-links">
-              <li><a href="#pricing">FAQ</a></li>
-              <li><span>support@rakhigift.me</span></li>
-              <li><span>Privacy Guarantee</span></li>
-              <li><span>Terms of Celebration</span></li>
+              <li><Link to="/faq">FAQs</Link></li>
+              <li><Link to="/privacy-policy">Privacy Policy</Link></li>
+              <li><Link to="/terms-and-conditions">Terms & Conditions</Link></li>
+              <li><a href="mailto:thedigitalasset88@gmail.com">thedigitalasset88@gmail.com</a></li>
             </ul>
           </div>
         </div>
@@ -186,26 +187,38 @@ export const Footer = () => {
 
         @media (max-width: 960px) {
           .footer-top {
-            grid-template-columns: 1fr 1fr;
-            gap: var(--space-8);
+            grid-template-columns: repeat(2, 1fr);
+            gap: var(--space-8) var(--space-6);
+            margin-bottom: var(--space-12);
           }
           .footer-brand {
-            grid-column: span 2;
+            grid-column: 1 / -1;
             max-width: 100%;
+            margin-bottom: var(--space-2);
           }
         }
 
         @media (max-width: 600px) {
+          .site-footer {
+            padding-top: var(--space-12);
+            padding-bottom: var(--space-8);
+          }
           .footer-top {
-            grid-template-columns: 1fr;
+            grid-template-columns: repeat(2, 1fr);
+            gap: var(--space-8) var(--space-4);
           }
           .footer-brand {
-            grid-column: span 1;
+            grid-column: 1 / -1;
           }
           .footer-bottom {
             flex-direction: column;
-            gap: var(--space-4);
+            gap: var(--space-3);
             text-align: center;
+            padding-top: var(--space-6);
+          }
+          .footer-copy {
+            justify-content: center;
+            flex-wrap: wrap;
           }
         }
       `}</style>

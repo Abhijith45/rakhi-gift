@@ -20,8 +20,18 @@ import Header from '../components/layout/Header';
 import Footer from '../components/layout/Footer';
 import Button from '../components/common/Button';
 import MemoryWall from '../components/memory-wall/MemoryWall';
+import GiftHeader from '../components/gift/GiftHeader';
+import GiftFooter from '../components/gift/GiftFooter';
+import GiftHero from '../components/gift/GiftHero';
+import RakhiMessage from '../components/gift/RakhiMessage';
+import WhySpecial from '../components/gift/WhySpecial';
+import MemoryTimeline from '../components/gift/MemoryTimeline';
+import SiblingFun from '../components/gift/SiblingFun';
+import SurpriseReveal from '../components/gift/SurpriseReveal';
+import FinalWish from '../components/gift/FinalWish';
+import KeepsakeShare from '../components/gift/KeepsakeShare';
 import { getPublicGift, trackEvent } from '../services/api';
-import { getThemeById } from '../data/themes';
+import { useGiftTheme } from '../hooks/useGiftTheme';
 
 export const PublicGiftPage = () => {
   const { slug } = useParams();
@@ -32,6 +42,8 @@ export const PublicGiftPage = () => {
   const [qrModalOpen, setQrModalOpen] = useState(false);
   const [qrDataUrl, setQrDataUrl] = useState('');
   const [copied, setCopied] = useState(false);
+
+  const { themeId, cssVariables } = useGiftTheme(gift?.theme);
 
   useEffect(() => {
     // Add noindex, nofollow to head for gift privacy
@@ -96,7 +108,7 @@ export const PublicGiftPage = () => {
   if (loading) {
     return (
       <div className="gift-page-loading">
-        <Header />
+        <GiftHeader gift={gift} plan="PREMIUM" />
         <div className="loading-content">
           <div className="loading-emblem animate-float">
             <Heart size={32} color="var(--color-rakhi-red)" />
@@ -111,7 +123,7 @@ export const PublicGiftPage = () => {
   if (error || !gift) {
     return (
       <div className="gift-page-error">
-        <Header />
+        <GiftHeader gift={gift} plan="PREMIUM" />
         <div className="container error-container">
           <div className="error-card paper-card">
             <AlertCircle size={44} color="var(--color-rakhi-red)" />
@@ -132,172 +144,62 @@ export const PublicGiftPage = () => {
     );
   }
 
-  const themeConfig = getThemeById(gift.theme);
-
   return (
     <div
       className="public-gift-root"
-      style={{
-        '--bg-primary': themeConfig.palette.bgPrimary,
-        '--bg-surface': themeConfig.palette.bgSurface,
-        '--color-rakhi-red': themeConfig.palette.accent,
-        '--color-gold': themeConfig.palette.gold
-      }}
+      data-theme={themeId}
+      style={cssVariables}
     >
-      <Header />
+      <GiftHeader gift={gift} plan={gift.plan} />
 
       <main className="gift-main">
         {/* Recipient Hero Opening */}
-        <section className="gift-hero-section">
-          <div className="container gift-hero-container">
-            <div className="gift-hero-badge">
-              <Sparkles size={14} className="sparkle-gold" />
-              <span>A Personalized Raksha Bandhan Tribute</span>
-            </div>
-
-            <h1 className="gift-hero-title">
-              For my favorite {gift.relationship.toLowerCase()},{' '}
-              <span className="title-serif-accent">
-                {gift.recipientNickname || gift.recipientName} ❤️
-              </span>
-            </h1>
-
-            <p className="gift-hero-sub">
-              A collection of our shared laughter, road trips, secret jokes, and lifelong memories — 
-              handcrafted with love by <strong>{gift.senderNickname || gift.senderName}</strong>.
-            </p>
-
-            <div className="gift-hero-share-bar">
-              <button type="button" className="btn btn-secondary btn-sm" onClick={handleCopyLink}>
-                {copied ? <Check size={14} /> : <Copy size={14} />}
-                <span>{copied ? 'Link Copied!' : 'Copy Gift Link'}</span>
-              </button>
-              <button
-                type="button"
-                className="btn btn-gold btn-sm"
-                onClick={() => setQrModalOpen(true)}
-              >
-                <QrCode size={14} />
-                <span>Show QR Code</span>
-              </button>
-            </div>
-          </div>
-        </section>
+        <GiftHero
+          gift={gift}
+          plan={gift.plan}
+          onOpenQrModal={() => setQrModalOpen(true)}
+          onCopyLink={handleCopyLink}
+          copied={copied}
+        />
 
         {/* 3D Connected Memory Wall */}
-        <section className="section gift-wall-section">
+        <section id="memory-wall" className="section gift-wall-section">
           <div className="container-wide">
-            <div className="section-header">
-              <div className="section-tag">
-                <Sparkles size={13} />
-                <span>Mounted Memories</span>
-              </div>
-              <h2 className="section-title">Our Memory Wall</h2>
-              <p className="section-subtitle">
-                Hover or tap any photo frame to explore our cherished moments together.
-              </p>
-            </div>
-
-            <MemoryWall gift={gift} />
+            <MemoryWall gift={gift} plan={gift.plan} theme={themeId} />
           </div>
         </section>
 
         {/* Heartfelt Rakhi Letter */}
-        <section className="section gift-letter-section">
-          <div className="container">
-            <div className="letter-container paper-card">
-              <div className="letter-wax-seal">
-                <span>❤️</span>
-              </div>
-              <div className="letter-salutation">{gift.message.salutation}</div>
-              <p className="letter-body-text">{gift.message.body}</p>
-              <div className="letter-footer-block">
-                <span className="letter-signoff-line">{gift.message.signoff}</span>
-                <span className="letter-sender-name">{gift.message.sender}</span>
-              </div>
-            </div>
-          </div>
-        </section>
+        <RakhiMessage gift={gift} plan={gift.plan} />
 
-        {/* Why You're Special */}
-        {gift.reasons && gift.reasons.length > 0 && (
-          <section className="section gift-reasons-section">
-            <div className="container">
-              <div className="section-header">
-                <div className="section-tag">
-                  <Heart size={13} />
-                  <span>The Sibling Bond</span>
-                </div>
-                <h2 className="section-title">
-                  {gift.reasons.length} Reasons Why You're Special
-                </h2>
-              </div>
+        {/* Why You're Special (Package Gated — Premium & Deluxe only) */}
+        <WhySpecial gift={gift} plan={gift.plan} />
 
-              <div className="reasons-display-grid">
-                {gift.reasons.map((r) => (
-                  <div key={r.id} className="reason-display-card paper-card">
-                    <div className="reason-num-bubble">{r.number}</div>
-                    <div>
-                      <h4 className="reason-card-title">{r.title}</h4>
-                      <p className="reason-card-desc">{r.text}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </section>
-        )}
+        {/* Memory Timeline (Package Gated — Premium & Deluxe only) */}
+        <MemoryTimeline gift={gift} plan={gift.plan} />
+
+        {/* Sibling Fun / Inside Jokes (Package Gated — Premium & Deluxe only) */}
+        <SiblingFun gift={gift} plan={gift.plan} />
 
         {/* Interactive Surprise Envelope Reveal */}
-        {gift.surprise && (gift.surprise.giftVoucher || gift.surprise.message) && (
-          <section className="section gift-surprise-section">
-            <div className="container">
-              <div className="surprise-stage-wrapper paper-card">
-                {!envelopeOpened ? (
-                  <div className="envelope-closed-view" onClick={handleOpenEnvelope}>
-                    <div className="wax-envelope-visual">
-                      <div className="flap-poly" />
-                      <div className="wax-seal-center">
-                        <Lock size={18} color="#FFFDF9" />
-                      </div>
-                    </div>
-                    <h3 className="surprise-prompt-heading">A Sealed Rakhi Promise</h3>
-                    <p className="surprise-prompt-text">
-                      Click to break the seal and reveal {gift.senderName}'s secret surprise!
-                    </p>
-                    <button type="button" className="btn btn-gold btn-md">
-                      <Unlock size={16} />
-                      <span>Break Seal & Open</span>
-                    </button>
-                  </div>
-                ) : (
-                  <div className="envelope-opened-view animate-fade-in-up">
-                    <div className="gift-voucher-card">
-                      <div className="voucher-gold-tag">
-                        <Award size={16} />
-                        <span>{gift.surprise.badge || 'A Little Surprise For You'}</span>
-                      </div>
-                      <h3 className="voucher-main-title">
-                        {gift.surprise.title || 'One Last Promise...'}
-                      </h3>
-                      {gift.surprise.message && (
-                        <p className="voucher-custom-msg">{gift.surprise.message}</p>
-                      )}
-                      {gift.surprise.giftVoucher && (
-                        <div className="voucher-code-highlight">
-                          <span>{gift.surprise.giftVoucher}</span>
-                        </div>
-                      )}
-                      {gift.surprise.giftNote && (
-                        <p className="voucher-sub-note">{gift.surprise.giftNote}</p>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </section>
-        )}
+        <SurpriseReveal
+          gift={gift}
+          plan={gift.plan}
+          onReveal={() => trackEvent('surprise_revealed', { slug, giftId: gift?.id })}
+        />
+
+        {/* Final Rakhi Wish & Blessing */}
+        <FinalWish gift={gift} plan={gift.plan} />
+
+        {/* Final Share & Permanent Keepsake QR Card */}
+        <KeepsakeShare
+          gift={gift}
+          plan={gift.plan}
+          qrDataUrl={qrDataUrl}
+          onOpenQrModal={() => setQrModalOpen(true)}
+          onCopyLink={handleCopyLink}
+          copied={copied}
+        />
       </main>
 
       {/* QR Code Modal Dialog */}
@@ -331,7 +233,7 @@ export const PublicGiftPage = () => {
         </div>
       )}
 
-      <Footer />
+      <GiftFooter gift={gift} plan={gift.plan} />
 
       <style>{`
         .public-gift-root {
@@ -340,151 +242,16 @@ export const PublicGiftPage = () => {
           color: var(--text-primary);
         }
 
-        .gift-hero-section {
-          padding-top: calc(var(--header-height) + 3rem);
-          padding-bottom: var(--space-8);
-          text-align: center;
-        }
-
-        .gift-hero-container {
-          max-width: 800px;
+        .gift-wall-section {
+          min-height: 100vh;
+          min-height: 100svh;
           display: flex;
           flex-direction: column;
           align-items: center;
-        }
-
-        .gift-hero-badge {
-          display: inline-flex;
-          align-items: center;
-          gap: var(--space-2);
-          background: var(--bg-surface);
-          border: 1px solid var(--border-default);
-          padding: 4px 14px;
-          border-radius: var(--radius-full);
-          font-size: var(--text-xs);
-          font-weight: 600;
-          color: var(--color-rakhi-red);
-          margin-bottom: var(--space-4);
-        }
-
-        .gift-hero-title {
-          font-size: clamp(2.2rem, 5vw, 3.4rem);
-          margin-bottom: var(--space-4);
-        }
-
-        .gift-hero-sub {
-          font-size: var(--text-base);
-          color: var(--text-secondary);
-          line-height: 1.7;
-          margin-bottom: var(--space-6);
-        }
-
-        .gift-hero-share-bar {
-          display: flex;
-          align-items: center;
-          gap: var(--space-3);
-        }
-
-        /* Letter Box */
-        .letter-container {
-          max-width: 760px;
-          margin: 0 auto;
-          padding: clamp(2rem, 5vw, 3.5rem);
+          justify-content: center;
+          padding-top: var(--space-20, 4rem);
+          padding-bottom: var(--space-10, 2.5rem);
           position: relative;
-          box-shadow: var(--shadow-md);
-        }
-
-        .letter-wax-seal {
-          position: absolute;
-          top: -20px;
-          left: 50%;
-          transform: translateX(-50%);
-          width: 42px;
-          height: 42px;
-          border-radius: 50%;
-          background: radial-gradient(circle at 35% 35%, #C23838, #8F181B 70%, #5E0D0F 100%);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          box-shadow: 0 3px 8px rgba(143, 24, 27, 0.4);
-          border: 1px solid #701316;
-          font-size: 16px;
-        }
-
-        .letter-salutation {
-          font-family: var(--font-serif);
-          font-size: 1.6rem;
-          font-weight: 700;
-          margin-bottom: var(--space-4);
-          color: var(--text-primary);
-        }
-
-        .letter-body-text {
-          font-size: 1.15rem;
-          line-height: 1.85;
-          color: var(--text-primary);
-          margin-bottom: var(--space-8);
-        }
-
-        .letter-footer-block {
-          display: flex;
-          flex-direction: column;
-          align-items: flex-end;
-          border-top: 1px dashed var(--border-default);
-          padding-top: var(--space-4);
-        }
-
-        .letter-signoff-line {
-          font-size: var(--text-sm);
-          font-style: italic;
-          color: var(--text-secondary);
-        }
-
-        .letter-sender-name {
-          font-family: var(--font-serif);
-          font-size: 1.4rem;
-          color: var(--color-rakhi-red);
-          font-weight: 700;
-        }
-
-        /* Reasons Grid */
-        .reasons-display-grid {
-          display: grid;
-          grid-template-columns: repeat(2, 1fr);
-          gap: var(--space-5);
-          max-width: 860px;
-          margin: 0 auto;
-        }
-
-        .reason-display-card {
-          display: flex;
-          gap: var(--space-4);
-          padding: var(--space-6);
-        }
-
-        .reason-num-bubble {
-          width: 36px;
-          height: 36px;
-          border-radius: 50%;
-          background: var(--color-rakhi-light);
-          color: var(--color-rakhi-red);
-          font-weight: 700;
-          font-size: var(--text-sm);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          flex-shrink: 0;
-        }
-
-        .reason-card-title {
-          font-size: 1.15rem;
-          margin-bottom: 4px;
-        }
-
-        .reason-card-desc {
-          font-size: var(--text-sm);
-          color: var(--text-secondary);
-          line-height: 1.6;
         }
 
         /* Surprise Section */
@@ -493,116 +260,6 @@ export const PublicGiftPage = () => {
           margin: 0 auto;
           padding: clamp(2rem, 5vw, 3.5rem);
           text-align: center;
-        }
-
-        .envelope-closed-view {
-          cursor: pointer;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-        }
-
-        .wax-envelope-visual {
-          width: 140px;
-          height: 96px;
-          background: linear-gradient(135deg, #E6DCCD 0%, #DFD2C2 100%);
-          border: 2px solid #C8B9A6;
-          border-radius: var(--radius-md);
-          position: relative;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          margin-bottom: var(--space-4);
-          box-shadow: var(--shadow-md);
-        }
-
-        .flap-poly {
-          position: absolute;
-          top: 0;
-          left: 0;
-          right: 0;
-          height: 0;
-          border-left: 70px solid transparent;
-          border-right: 70px solid transparent;
-          border-top: 50px solid #D6C7B3;
-        }
-
-        .wax-seal-center {
-          position: relative;
-          z-index: 2;
-          width: 38px;
-          height: 38px;
-          border-radius: 50%;
-          background: radial-gradient(circle at 35% 35%, #C23838, #8F181B 70%, #5E0D0F 100%);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          box-shadow: 0 3px 8px rgba(143, 24, 27, 0.4);
-          border: 1px solid #701316;
-        }
-
-        .surprise-prompt-heading {
-          font-size: 1.5rem;
-          margin-bottom: 4px;
-        }
-
-        .surprise-prompt-text {
-          font-size: var(--text-sm);
-          color: var(--text-secondary);
-          margin-bottom: var(--space-5);
-        }
-
-        .gift-voucher-card {
-          background: linear-gradient(135deg, #FAF4E8 0%, #FFFDF9 100%);
-          border: 2px solid var(--color-gold);
-          border-radius: var(--radius-lg);
-          padding: var(--space-8);
-          box-shadow: var(--shadow-md);
-        }
-
-        .voucher-gold-tag {
-          display: inline-flex;
-          align-items: center;
-          gap: 6px;
-          background: var(--color-gold);
-          color: #FFFFFF;
-          font-size: var(--text-xs);
-          font-weight: 700;
-          text-transform: uppercase;
-          letter-spacing: 0.05em;
-          padding: 4px 14px;
-          border-radius: var(--radius-full);
-          margin-bottom: var(--space-4);
-        }
-
-        .voucher-main-title {
-          font-size: 1.6rem;
-          margin-bottom: var(--space-3);
-        }
-
-        .voucher-custom-msg {
-          font-size: var(--text-sm);
-          color: var(--text-secondary);
-          line-height: 1.65;
-          margin-bottom: var(--space-5);
-        }
-
-        .voucher-code-highlight {
-          background: #FFFFFF;
-          border: 1px dashed var(--color-gold);
-          padding: var(--space-3) var(--space-4);
-          border-radius: var(--radius-md);
-          font-family: monospace;
-          font-weight: 700;
-          font-size: var(--text-sm);
-          color: var(--color-rakhi-red);
-          margin-bottom: var(--space-3);
-        }
-
-        .voucher-sub-note {
-          font-size: var(--text-xs);
-          color: var(--text-muted);
-          font-style: italic;
         }
 
         /* QR Modal */

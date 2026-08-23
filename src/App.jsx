@@ -5,6 +5,9 @@ import LandingPage from './pages/LandingPage';
 import CreatorPage from './pages/CreatorPage';
 import PublicGiftPage from './pages/PublicGiftPage';
 import NotFoundPage from './pages/NotFoundPage';
+import FAQPage from './pages/FAQPage';
+import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
+import TermsPage from './pages/TermsPage';
 import AdminLoginPage from './pages/admin/AdminLoginPage';
 import AdminDashboardPage from './pages/admin/AdminDashboardPage';
 import { trackEvent } from './services/api';
@@ -27,6 +30,9 @@ export const App = () => {
           <Route path="/" element={<LandingPage />} />
           <Route path="/create" element={<CreatorPage />} />
           <Route path="/g/:slug" element={<PublicGiftPage />} />
+          <Route path="/faq" element={<FAQPage />} />
+          <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
+          <Route path="/terms-and-conditions" element={<TermsPage />} />
           <Route path="/admin/login" element={<AdminLoginPage />} />
           <Route path="/admin" element={<AdminDashboardPage />} />
           <Route path="/admin/*" element={<AdminDashboardPage />} />

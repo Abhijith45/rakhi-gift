@@ -16,16 +16,20 @@ export const ImageCard = ({
   photo,
   index,
   total,
+  allowCaptions = true,
+  allowDates = true,
   onEditCrop,
   onRemove,
   onMoveUp,
   onMoveDown,
-  onCaptionChange
+  onCaptionChange,
+  onDateChange
 }) => {
   const {
     previewUrl,
     croppedDataUrl,
     caption = '',
+    date = '',
     status = 'READY', // 'NEEDS_CROP' | 'READY' | 'UPLOADING' | 'UPLOADED' | 'FAILED'
     error = null
   } = photo;
@@ -106,20 +110,36 @@ export const ImageCard = ({
         </div>
       </div>
 
-      {/* Caption & Controls Area */}
+      {/* Caption & Date Inputs Area */}
       <div className="card-bottom-content">
-        <div className="caption-input-container">
-          <MessageSquare size={13} className="caption-icon" />
-          <input
-            type="text"
-            className="card-caption-input"
-            placeholder="Add memory caption (e.g. Partners in crime ❤️)"
-            value={caption}
-            onChange={(e) => onCaptionChange(photo.id, e.target.value)}
-            maxLength={80}
-            aria-label={`Caption for photo ${index + 1}`}
-          />
-        </div>
+        {allowCaptions && (
+          <div className="caption-input-container">
+            <MessageSquare size={13} className="caption-icon" />
+            <input
+              type="text"
+              className="card-caption-input"
+              placeholder="Add caption (e.g. Partners in crime ❤️)"
+              value={caption}
+              onChange={(e) => onCaptionChange && onCaptionChange(photo.id, e.target.value)}
+              maxLength={80}
+              aria-label={`Caption for photo ${index + 1}`}
+            />
+          </div>
+        )}
+
+        {allowDates && (
+          <div className="caption-input-container date-input-container">
+            <input
+              type="text"
+              className="card-caption-input"
+              placeholder="Memory date (optional, e.g. Diwali 2019)"
+              value={date}
+              onChange={(e) => onDateChange && onDateChange(photo.id, e.target.value)}
+              maxLength={24}
+              aria-label={`Date for photo ${index + 1}`}
+            />
+          </div>
+        )}
 
         {/* Bottom Toolbar: Reorder & Edit Buttons */}
         <div className="card-actions-strip">

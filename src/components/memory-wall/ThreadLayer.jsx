@@ -1,103 +1,219 @@
-import React, { useMemo } from 'react';
+import React, { useRef, useEffect, useCallback } from 'react';
+import { getWallConfig } from './wallConfig';
 
 /**
- * Pure SVG Thread Layer
- * Renders smooth cubic Bézier sag curves between photo frame pins in sacred crimson thread.
+ * Pure 2D Canvas Sacred Thread Network
+ * Renders physical crimson silk threads connecting photo mounting pins with natural sag.
+ * Fully responsive, high-DPI calibrated, zero continuous redraw loops.
  */
 export const ThreadLayer = ({
   photos = [],
   connections = [],
-  isMobile = false
+  viewport = 'desktop',
+  isMobile = false,
+  plan = 'PREMIUM',
+  theme = null
 }) => {
-  // Compute pin anchor coordinates (% of container width/height)
-  const pinPoints = useMemo(() => {
-    return photos.map((p) => {
-      // Frame top-center anchor:
-      // X = left + (width / 2)
-      // Y = top + slight offset for the clip
-      const x = p.left + (p.width / 2);
-      const y = p.top - 0.5;
+  const canvasRef = useRef(null);
+  const containerRef = useRef(null);
+
+  const config = getWallConfig(plan);
+  const normalizedPlan = (plan || 'PREMIUM').toUpperCase();
+  const isDeluxe = normalizedPlan === 'DELUXE';
+  const resolvedMode = viewport || (isMobile ? 'mobile' : 'desktop');
+
+  // Draw thread network onto the 2D canvas
+  const drawThreads = useCallback((width, height) => {
+    const canvas = canvasRef.current;
+    if (!canvas || width <= 0 || height <= 0 || photos.length === 0) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+    // Set high-DPI buffer dimensions
+    canvas.width = Math.floor(width * dpr);
+    canvas.height = Math.floor(height * dpr);
+
+    // Reset transform & scale to DPR
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.scale(dpr, dpr);
+
+    // Clear previous drawing
+    ctx.clearRect(0, 0, width, height);
+
+    if (connections.length === 0) return;
+
+    // Calculate deterministic pin anchor points in actual pixels
+    const yOffsetPercent = resolvedMode === 'mobile' ? 0.75 : resolvedMode === 'tablet' ? 0.65 : 0.55;
+    const pinCoords = photos.map((p) => {
+      const x = ((p.left + (p.width / 2)) / 100) * width;
+      const y = ((p.top + yOffsetPercent) / 100) * height;
       return { x, y };
     });
-  }, [photos]);
 
-  // Generate curved SVG path strings
-  const paths = useMemo(() => {
-    const list = [];
+    // Theme-aware Silk thread color
+    let themeThreadColor = null;
+    if (theme && typeof theme === 'object' && theme.wall?.threadColor) {
+      themeThreadColor = theme.wall.threadColor;
+    } else if (typeof window !== 'undefined' && canvas) {
+      const computedVar = getComputedStyle(canvas).getPropertyValue('--gift-thread').trim();
+      if (computedVar) themeThreadColor = computedVar;
+    }
 
-    connections.forEach(([idxA, idxB], i) => {
-      const p1 = pinPoints[idxA];
-      const p2 = pinPoints[idxB];
+    const threadColor = themeThreadColor || (isDeluxe ? '#841519' : (config.threadColor || '#9B2226'));
+    const threadWidth = resolvedMode === 'mobile' ? 1.5 : resolvedMode === 'tablet' ? 1.8 : (isDeluxe ? 2.3 : 2.0);
+
+    // 1. Draw subtle ambient contact shadow below threads
+    ctx.save();
+    ctx.strokeStyle = isDeluxe ? 'rgba(40, 14, 10, 0.28)' : 'rgba(58, 28, 18, 0.22)';
+    ctx.lineWidth = threadWidth + 1.2;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    connections.forEach(([idxA, idxB]) => {
+      const p1 = pinCoords[idxA];
+      const p2 = pinCoords[idxB];
       if (!p1 || !p2) return;
 
       const dx = p2.x - p1.x;
       const dy = p2.y - p1.y;
       const dist = Math.sqrt(dx * dx + dy * dy);
 
-      // Natural gravity sag percentage based on span distance
-      const sag = Math.min(6.5, Math.max(1.8, dist * 0.08));
+      // Natural gravitational sag
+      const sag = Math.min(38, Math.max(8, dist * 0.065));
 
-      // Control points for cubic Bézier curve
-      const cx1 = p1.x + dx * 0.3;
-      const cy1 = p1.y + dy * 0.3 + sag;
-      const cx2 = p1.x + dx * 0.7;
-      const cy2 = p1.y + dy * 0.7 + sag;
+      // Control points for cubic Bézier curve with shadow offset
+      const cx1 = p1.x + dx * 0.33;
+      const cy1 = p1.y + dy * 0.33 + sag + 1.8;
+      const cx2 = p1.x + dx * 0.67;
+      const cy2 = p1.y + dy * 0.67 + sag + 1.8;
 
-      const d = `M ${p1.x} ${p1.y} C ${cx1} ${cy1}, ${cx2} ${cy2}, ${p2.x} ${p2.y}`;
-      list.push({ id: `thread-${i}`, d });
+      ctx.beginPath();
+      ctx.moveTo(p1.x + 0.8, p1.y + 1.8);
+      ctx.bezierCurveTo(cx1, cy1, cx2, cy2, p2.x + 0.8, p2.y + 1.8);
+      ctx.stroke();
+    });
+    ctx.restore();
+
+    // 2. Draw the primary crimson silk threads
+    ctx.save();
+    ctx.strokeStyle = threadColor;
+    ctx.lineWidth = threadWidth;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.globalAlpha = config.threadOpacity || 0.92;
+
+    connections.forEach(([idxA, idxB]) => {
+      const p1 = pinCoords[idxA];
+      const p2 = pinCoords[idxB];
+      if (!p1 || !p2) return;
+
+      const dx = p2.x - p1.x;
+      const dy = p2.y - p1.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+
+      // Natural gravitational sag
+      const sag = Math.min(36, Math.max(7, dist * 0.062));
+
+      const cx1 = p1.x + dx * 0.33;
+      const cy1 = p1.y + dy * 0.33 + sag;
+      const cx2 = p1.x + dx * 0.67;
+      const cy2 = p1.y + dy * 0.67 + sag;
+
+      ctx.beginPath();
+      ctx.moveTo(p1.x, p1.y);
+      ctx.bezierCurveTo(cx1, cy1, cx2, cy2, p2.x, p2.y);
+      ctx.stroke();
+    });
+    ctx.restore();
+
+    // 3. For Deluxe tier: add subtle golden filament accent along alternate threads
+    if (isDeluxe) {
+      ctx.save();
+      ctx.strokeStyle = 'rgba(212, 175, 55, 0.45)';
+      ctx.lineWidth = 0.8;
+      ctx.lineCap = 'round';
+
+      connections.forEach(([idxA, idxB], i) => {
+        if (i % 2 !== 0) return;
+        const p1 = pinCoords[idxA];
+        const p2 = pinCoords[idxB];
+        if (!p1 || !p2) return;
+
+        const dx = p2.x - p1.x;
+        const dy = p2.y - p1.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        const sag = Math.min(36, Math.max(7, dist * 0.062));
+
+        const cx1 = p1.x + dx * 0.33;
+        const cy1 = p1.y + dy * 0.33 + sag - 0.4;
+        const cx2 = p1.x + dx * 0.67;
+        const cy2 = p1.y + dy * 0.67 + sag - 0.4;
+
+        ctx.beginPath();
+        ctx.moveTo(p1.x, p1.y - 0.4);
+        ctx.bezierCurveTo(cx1, cy1, cx2, cy2, p2.x, p2.y - 0.4);
+        ctx.stroke();
+      });
+      ctx.restore();
+    }
+  }, [photos, connections, resolvedMode, isDeluxe, config]);
+
+  // Monitor container size with ResizeObserver to render once and adjust on resize
+  useEffect(() => {
+    const container = containerRef.current?.parentElement;
+    if (!container) return;
+
+    const handleResize = () => {
+      const { clientWidth, clientHeight } = container;
+      if (clientWidth > 0 && clientHeight > 0) {
+        drawThreads(clientWidth, clientHeight);
+      }
+    };
+
+    handleResize();
+
+    const resizeObserver = new ResizeObserver(() => {
+      handleResize();
     });
 
-    return list;
-  }, [pinPoints, connections]);
+    resizeObserver.observe(container);
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, [drawThreads]);
 
   return (
-    <svg
-      className="memory-wall-thread-svg"
-      viewBox="0 0 100 100"
-      preserveAspectRatio="none"
-      aria-hidden="true"
-    >
-      <defs>
-        <filter id="thread-shadow" x="-20%" y="-20%" width="140%" height="140%">
-          <feDropShadow dx="0.2" dy="0.4" stdDeviation="0.3" floodColor="#3A1C12" floodOpacity="0.35" />
-        </filter>
-      </defs>
-
-      {paths.map(({ id, d }) => (
-        <path
-          key={id}
-          d={d}
-          className="thread-path"
-          filter="url(#thread-shadow)"
-        />
-      ))}
+    <div ref={containerRef} className="memory-wall-thread-canvas-container" aria-hidden="true">
+      <canvas
+        ref={canvasRef}
+        className="memory-wall-thread-canvas"
+      />
 
       <style>{`
-        .memory-wall-thread-svg {
+        .memory-wall-thread-canvas-container {
           position: absolute;
           inset: 0;
           width: 100%;
           height: 100%;
           pointer-events: none;
-          z-index: 4;
+          z-index: 3;
+          overflow: hidden;
         }
 
-        .thread-path {
-          fill: none;
-          stroke: #9B2226; /* Rakhi Crimson */
-          stroke-width: 0.28;
-          stroke-linecap: round;
-          stroke-linejoin: round;
-          opacity: 0.88;
-        }
-
-        @media (max-width: 768px) {
-          .thread-path {
-            stroke-width: 0.35;
-          }
+        .memory-wall-thread-canvas {
+          position: absolute;
+          inset: 0;
+          width: 100%;
+          height: 100%;
+          pointer-events: none;
+          display: block;
         }
       `}</style>
-    </svg>
+    </div>
   );
 };
 

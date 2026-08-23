@@ -6,6 +6,18 @@ import { uploadImageBuffer } from '../config/cloudinary.js';
 const MAX_IMAGES_PER_GIFT = 8;
 const MAX_FILE_SIZE_BYTES = 6 * 1024 * 1024; // 6 MB
 
+const ALLOWED_THEMES = new Set(['warm-memory', 'playful-childhood', 'elegant-minimal', 'traditional-rakhi']);
+
+/**
+ * Validates theme ID against approved theme catalog, falling back to 'warm-memory'
+ */
+export function sanitizeTheme(theme) {
+  if (typeof theme === 'string' && ALLOWED_THEMES.has(theme.trim().toLowerCase())) {
+    return theme.trim().toLowerCase();
+  }
+  return 'warm-memory';
+}
+
 /**
  * Creates a new Gift Draft
  */
@@ -14,13 +26,15 @@ export async function createDraft(req, res) {
     const {
       senderName,
       recipientName,
-      relationship = 'Brother',
+      relationship = 'Sister',
       senderNickname,
       recipientNickname,
       theme = 'warm-memory',
       message = '',
       plan = 'PREMIUM',
       reasons = [],
+      memories = [],
+      funItems = [],
       surprise = {}
     } = req.body;
 
@@ -34,6 +48,8 @@ export async function createDraft(req, res) {
       });
     }
 
+    const validatedTheme = sanitizeTheme(theme);
+
     const gift = await prisma.gift.create({
       data: {
         slug: null, // Public slug is created only after verified payment
@@ -42,7 +58,7 @@ export async function createDraft(req, res) {
         relationship,
         senderNickname: senderNickname?.trim() || null,
         recipientNickname: recipientNickname?.trim() || null,
-        theme,
+        theme: validatedTheme,
         message: message.trim(),
         plan: plan.toUpperCase(),
         status: 'DRAFT',
@@ -58,11 +74,31 @@ export async function createDraft(req, res) {
             text: r.text || '',
             displayOrder: idx
           }))
+        },
+        memories: {
+          create: memories.map((m, idx) => ({
+            date: m.date || '',
+            title: m.title || '',
+            description: m.description || '',
+            photoId: m.photoId || null,
+            imageUrl: m.imageUrl || null,
+            thumbnailUrl: m.thumbnailUrl || m.imageUrl || null,
+            displayOrder: idx
+          }))
+        },
+        funItems: {
+          create: funItems.map((f, idx) => ({
+            question: f.question || '',
+            answer: f.answer || '',
+            displayOrder: idx
+          }))
         }
       },
       include: {
         photos: true,
-        reasons: true
+        reasons: true,
+        memories: { include: { photo: true } },
+        funItems: true
       }
     });
 
@@ -98,10 +134,15 @@ export async function updateGift(req, res) {
       message,
       plan,
       reasons,
+      memories,
+      funItems,
       surprise
     } = req.body;
 
-    const existing = await prisma.gift.findUnique({ where: { id } });
+    const existing = await prisma.gift.findUnique({
+      where: { id },
+      include: { photos: true }
+    });
     if (!existing) {
       return res.status(404).json({
         success: false,
@@ -123,6 +164,66 @@ export async function updateGift(req, res) {
       });
     }
 
+    // Update memories if provided with photo authorization security check
+    if (Array.isArray(memories)) {
+      const validPhotoIds = new Set(existing.photos.map((p) => p.id));
+      await prisma.giftMemory.deleteMany({ where: { giftId: id } });
+
+      const memoryDataToCreate = [];
+      for (let idx = 0; idx < memories.length; idx++) {
+        const m = memories[idx];
+        let photoId = m.photoId || null;
+        let imageUrl = m.imageUrl || null;
+
+        // Security check: ensure referenced photoId belongs to this gift
+        if (photoId && !validPhotoIds.has(photoId)) {
+          photoId = null;
+        }
+
+        // Handle base64 new timeline upload if passed inline
+        if (imageUrl && imageUrl.startsWith('data:image/')) {
+          try {
+            const base64Data = imageUrl.split('base64,')[1];
+            const buffer = Buffer.from(base64Data, 'base64');
+            const uploadResult = await uploadImageBuffer(buffer, `timeline-${id}-${idx}.jpg`);
+            imageUrl = uploadResult.url;
+          } catch (e) {
+            console.warn('Timeline inline image upload failed:', e);
+          }
+        }
+
+        memoryDataToCreate.push({
+          giftId: id,
+          date: m.date || '',
+          title: m.title || '',
+          description: m.description || '',
+          photoId: photoId,
+          imageUrl: imageUrl,
+          thumbnailUrl: m.thumbnailUrl || imageUrl,
+          displayOrder: idx
+        });
+      }
+
+      if (memoryDataToCreate.length > 0) {
+        await prisma.giftMemory.createMany({ data: memoryDataToCreate });
+      }
+    }
+
+    // Update funItems if provided
+    if (Array.isArray(funItems)) {
+      await prisma.giftFunItem.deleteMany({ where: { giftId: id } });
+      if (funItems.length > 0) {
+        await prisma.giftFunItem.createMany({
+          data: funItems.map((f, idx) => ({
+            giftId: id,
+            question: f.question || '',
+            answer: f.answer || '',
+            displayOrder: idx
+          }))
+        });
+      }
+    }
+
     const updated = await prisma.gift.update({
       where: { id },
       data: {
@@ -131,7 +232,7 @@ export async function updateGift(req, res) {
         ...(relationship && { relationship }),
         ...(senderNickname !== undefined && { senderNickname }),
         ...(recipientNickname !== undefined && { recipientNickname }),
-        ...(theme && { theme }),
+        ...(theme && { theme: sanitizeTheme(theme) }),
         ...(message !== undefined && { message }),
         ...(plan && { plan: plan.toUpperCase() }),
         ...(surprise?.badge && { surpriseBadge: surprise.badge }),
@@ -142,7 +243,9 @@ export async function updateGift(req, res) {
       },
       include: {
         photos: { orderBy: { displayOrder: 'asc' } },
-        reasons: { orderBy: { displayOrder: 'asc' } }
+        reasons: { orderBy: { displayOrder: 'asc' } },
+        memories: { include: { photo: true }, orderBy: { displayOrder: 'asc' } },
+        funItems: { orderBy: { displayOrder: 'asc' } }
       }
     });
 
@@ -179,14 +282,15 @@ export async function uploadPhotos(req, res) {
       });
     }
 
-    // Enforce maximum 8 images per gift constraint
+    // Enforce package-specific photo limits (BASIC: 4, PREMIUM/DELUXE: 8)
+    const planMax = (gift.plan || 'PREMIUM').toUpperCase() === 'BASIC' ? 4 : 8;
     const currentCount = gift.photos.length;
-    if (currentCount + photos.length > MAX_IMAGES_PER_GIFT) {
+    if (currentCount + photos.length > planMax) {
       return res.status(400).json({
         success: false,
         error: {
           code: 'IMAGE_LIMIT_EXCEEDED',
-          message: `You can add up to ${MAX_IMAGES_PER_GIFT} memories.`
+          message: `The ${(gift.plan || 'PREMIUM').toUpperCase()} package supports a maximum of ${planMax} photos.`
         }
       });
     }
@@ -384,7 +488,8 @@ export async function getDraft(req, res) {
       include: {
         photos: { orderBy: { displayOrder: 'asc' } },
         reasons: { orderBy: { displayOrder: 'asc' } },
-        memories: { orderBy: { displayOrder: 'asc' } },
+        memories: { include: { photo: true }, orderBy: { displayOrder: 'asc' } },
+        funItems: { orderBy: { displayOrder: 'asc' } },
         payments: true
       }
     });
@@ -429,7 +534,8 @@ export async function getPublicGift(req, res) {
       include: {
         photos: { orderBy: { displayOrder: 'asc' } },
         reasons: { orderBy: { displayOrder: 'asc' } },
-        memories: { orderBy: { displayOrder: 'asc' } }
+        memories: { include: { photo: true }, orderBy: { displayOrder: 'asc' } },
+        funItems: { orderBy: { displayOrder: 'asc' } }
       }
     });
 
@@ -474,7 +580,8 @@ export async function getPublicGift(req, res) {
         relationship: gift.relationship,
         senderNickname: gift.senderNickname,
         recipientNickname: gift.recipientNickname,
-        theme: gift.theme,
+        theme: sanitizeTheme(gift.theme),
+        plan: gift.plan,
         message: {
           salutation: `Dearest ${gift.recipientNickname || gift.recipientName},`,
           body: gift.message,
@@ -486,6 +593,21 @@ export async function getPublicGift(req, res) {
           number: r.number || `0${idx + 1}`,
           title: r.title,
           text: r.text
+        })),
+        memories: gift.memories.map((m, idx) => ({
+          id: m.id,
+          date: m.date,
+          title: m.title,
+          description: m.description,
+          photoId: m.photoId,
+          image: m.photo?.url || m.imageUrl || null,
+          displayOrder: m.displayOrder ?? idx
+        })),
+        funItems: gift.funItems.map((f, idx) => ({
+          id: f.id,
+          question: f.question,
+          answer: f.answer,
+          displayOrder: f.displayOrder ?? idx
         })),
         surprise: {
           badge: gift.surpriseBadge || 'A Little Surprise For You',
