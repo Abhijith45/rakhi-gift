@@ -410,7 +410,8 @@ img, svg {
     padding-bottom: var(--space-12);
   }
 
-  .btn {
+  .btn-full-mobile,
+  .btn-group-mobile-stack .btn {
     width: 100%;
   }
 

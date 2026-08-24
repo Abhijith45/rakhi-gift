@@ -15,6 +15,16 @@ export const Header = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && mobileMenuOpen) {
+        setMobileMenuOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [mobileMenuOpen]);
+
   return (
     <header className={`site-header ${scrolled ? 'header-scrolled' : ''}`}>
       <div className="container header-inner">
@@ -232,12 +242,21 @@ export const Header = () => {
           display: none;
           align-items: center;
           justify-content: center;
-          width: 40px;
-          height: 40px;
+          width: 44px;
+          height: 44px;
+          min-width: 44px;
+          min-height: 44px;
           color: var(--text-primary);
           background: none;
           border: none;
           cursor: pointer;
+          border-radius: var(--radius-sm, 6px);
+          transition: background-color 0.2s ease;
+        }
+
+        .mobile-toggle:hover,
+        .mobile-toggle:focus-visible {
+          background-color: var(--bg-subtle, rgba(0, 0, 0, 0.04));
         }
 
         .nav-mobile-overlay {
@@ -264,6 +283,9 @@ export const Header = () => {
           color: var(--text-secondary);
           padding: var(--space-2) 0;
           text-decoration: none;
+          min-height: 44px;
+          display: flex;
+          align-items: center;
         }
 
         .mobile-nav-link:hover {
@@ -296,8 +318,15 @@ export const Header = () => {
         }
 
         @media (max-width: 480px) {
+          .brand-logo {
+            font-size: 1.15rem;
+            gap: var(--space-2);
+          }
+          .header-actions {
+            gap: var(--space-2);
+          }
           .header-actions .btn {
-            padding: 6px 12px;
+            padding: 6px 10px;
             font-size: var(--text-xs, 0.75rem);
           }
         }

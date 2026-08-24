@@ -152,6 +152,7 @@ export const MemoryWall = ({
           transform: translateX(-50%);
           display: inline-flex;
           align-items: center;
+          justify-content: center;
           gap: 6px;
           background: rgba(255, 253, 249, 0.92);
           backdrop-filter: blur(6px);
@@ -164,12 +165,15 @@ export const MemoryWall = ({
           box-shadow: var(--shadow-sm, 0 2px 4px rgba(0, 0, 0, 0.05));
           pointer-events: none;
           z-index: 15;
+          max-width: calc(100% - 24px);
           white-space: nowrap;
+          box-sizing: border-box;
         }
 
         .counter-heart {
           color: var(--color-rakhi-red, #9B2226);
           fill: var(--color-rakhi-red, #9B2226);
+          flex-shrink: 0;
         }
 
         .plan-deluxe .counter-heart {
@@ -179,9 +183,11 @@ export const MemoryWall = ({
 
         @media (max-width: 640px) {
           .wall-hint-overlay {
-            font-size: 10.5px;
-            padding: 4px 12px;
-            bottom: 10px;
+            font-size: 10px;
+            padding: 4px 10px;
+            bottom: 8px;
+            white-space: normal;
+            text-align: center;
           }
         }
       `}</style>

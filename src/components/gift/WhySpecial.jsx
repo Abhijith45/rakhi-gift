@@ -49,7 +49,7 @@ export const WhySpecial = ({
 
     const timer = setInterval(() => {
       nextSlide();
-    }, 2000);
+    }, 4500);
 
     return () => clearInterval(timer);
   }, [isPlaying, isHovered, nextSlide, totalSlides]);

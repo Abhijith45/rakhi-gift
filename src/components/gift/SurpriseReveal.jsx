@@ -394,6 +394,10 @@ export const SurpriseReveal = ({
           display: inline-block;
           margin-bottom: var(--space-4, 1rem);
           box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.04);
+          max-width: 100%;
+          box-sizing: border-box;
+          word-break: break-word;
+          overflow-wrap: anywhere;
         }
 
         .voucher-code-text {
@@ -402,6 +406,8 @@ export const SurpriseReveal = ({
           font-size: 1rem;
           color: var(--color-rakhi-red, #9B2226);
           letter-spacing: 0.08em;
+          word-break: break-word;
+          overflow-wrap: anywhere;
         }
 
         .voucher-sub-note {

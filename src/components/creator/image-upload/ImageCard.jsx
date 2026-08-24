@@ -267,8 +267,10 @@ export const ImageCard = ({
           background: transparent;
           color: var(--text-muted);
           border: none;
-          padding: 4px;
-          border-radius: 4px;
+          padding: 6px;
+          min-width: 32px;
+          min-height: 32px;
+          border-radius: 6px;
           cursor: pointer;
           transition: all 0.2s;
           display: flex;
@@ -288,9 +290,8 @@ export const ImageCard = ({
           aspect-ratio: 4 / 3;
           border-radius: var(--radius-md);
           overflow: hidden;
-          background: #E8DEC8;
+          background: var(--bg-subtle);
           cursor: pointer;
-          border: 1px solid rgba(0, 0, 0, 0.08);
         }
 
         .thumbnail-img {
@@ -374,9 +375,10 @@ export const ImageCard = ({
           background: #FAF5ED;
           border: 1px solid var(--border-light);
           color: var(--text-primary);
-          padding: 4px 10px;
+          padding: 5px 10px;
+          min-height: 32px;
           border-radius: var(--radius-sm);
-          font-size: 11px;
+          font-size: 11.5px;
           font-weight: 600;
           cursor: pointer;
           transition: all 0.2s;
@@ -391,15 +393,17 @@ export const ImageCard = ({
         .reorder-btn-group {
           display: flex;
           align-items: center;
-          gap: 3px;
+          gap: 4px;
         }
 
         .btn-reorder {
           background: #FFFFFF;
           border: 1px solid var(--border-default);
           color: var(--text-secondary);
-          width: 24px;
-          height: 24px;
+          width: 32px;
+          height: 32px;
+          min-width: 32px;
+          min-height: 32px;
           border-radius: var(--radius-sm);
           display: flex;
           align-items: center;

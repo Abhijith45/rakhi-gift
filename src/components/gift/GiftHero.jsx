@@ -177,7 +177,7 @@ export const GiftHero = ({
         /* --- Title & Typography --- */
         .gift-hero-title {
           font-family: var(--gift-font-heading, 'Playfair Display', Georgia, serif);
-          font-size: clamp(2.1rem, 5.2vw, 3.75rem);
+          font-size: clamp(1.75rem, 5.2vw, 3.75rem);
           font-weight: 700;
           line-height: 1.15;
           color: var(--gift-text, #1E1B18);
