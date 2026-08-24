@@ -67,7 +67,7 @@ export const FinalWish = ({
           background: var(--gift-surface, #FFFDF9);
           border: 1px solid var(--gift-border, #E5D9C8);
           border-radius: var(--radius-xl, 16px);
-          padding: clamp(2.5rem, 6vw, 4rem) clamp(1.75rem, 5vw, 3.5rem);
+          padding: clamp(2rem, 5vw, 3.75rem) clamp(1.15rem, 4vw, 3.25rem);
           text-align: center;
           box-shadow: 
             0 12px 36px -6px var(--gift-shadow-tone, rgba(60, 45, 25, 0.12)),

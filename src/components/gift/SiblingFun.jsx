@@ -64,13 +64,13 @@ export const SiblingFun = ({
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
 
-  // Autoplay changing slide every 2500ms (bottom to top progression)
+  // Autoplay changing slide every 4500ms (bottom to top progression)
   useEffect(() => {
     if (isHovered || totalSlides <= 1) return;
 
     const timer = setInterval(() => {
       setCurrentIndex((prev) => (prev + 1) % totalSlides);
-    }, 2500);
+    }, 4500);
 
     return () => clearInterval(timer);
   }, [isHovered, totalSlides]);
@@ -221,8 +221,8 @@ export const SiblingFun = ({
           flex-direction: column;
           align-items: center;
           justify-content: center;
-          padding-top: calc(var(--header-height, 72px) + 2.5rem);
-          padding-bottom: var(--space-12, 3rem);
+          padding-top: var(--space-8, 2rem);
+          padding-bottom: var(--space-8, 2rem);
           position: relative;
           background: transparent;
           box-sizing: border-box;
@@ -232,7 +232,7 @@ export const SiblingFun = ({
           max-width: 960px;
           width: 100%;
           margin: 0 auto;
-          padding: 0 1.5rem;
+          padding: 0 clamp(0.75rem, 3.5vw, 1.5rem);
           display: flex;
           flex-direction: column;
           align-items: center;
@@ -241,7 +241,7 @@ export const SiblingFun = ({
         .fun-header {
           text-align: center;
           max-width: 680px;
-          margin: 0 auto 2rem auto;
+          margin: 0 auto var(--space-6, 1.5rem) auto;
         }
 
         .fun-tag {

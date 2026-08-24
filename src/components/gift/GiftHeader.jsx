@@ -95,12 +95,29 @@ export const GiftHeader = ({
     return () => sectionObserver.disconnect();
   }, [hasWhySpecial, hasTimeline, hasFun, hasSurprise]);
 
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && mobileMenuOpen) {
+        setMobileMenuOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [mobileMenuOpen]);
+
   const handleNavClick = (e, targetId) => {
     e.preventDefault();
     setMobileMenuOpen(false);
     const targetEl = document.getElementById(targetId) || document.getElementById(`${targetId}-section`);
     if (targetEl) {
-      targetEl.scrollIntoView({ behavior: 'smooth' });
+      const prefersReducedMotion =
+        typeof window !== 'undefined' &&
+        window.matchMedia &&
+        window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      targetEl.scrollIntoView({
+        behavior: prefersReducedMotion ? 'auto' : 'smooth',
+        block: 'start'
+      });
     }
   };
 
@@ -331,8 +348,10 @@ export const GiftHeader = ({
         }
 
         .mobile-chapter-toggle {
-          width: 38px;
-          height: 38px;
+          width: 44px;
+          height: 44px;
+          min-width: 44px;
+          min-height: 44px;
           border-radius: var(--radius-md, 8px);
           background: var(--bg-surface, #FFFDF9);
           border: 1px solid var(--border-default, #E5D9C8);
@@ -341,6 +360,12 @@ export const GiftHeader = ({
           justify-content: center;
           color: var(--text-primary, #1E1B18);
           cursor: pointer;
+          transition: background-color 0.2s ease;
+        }
+
+        .mobile-chapter-toggle:hover,
+        .mobile-chapter-toggle:focus-visible {
+          background-color: var(--bg-subtle, rgba(0, 0, 0, 0.04));
         }
 
         /* --- Mobile Drawer --- */
@@ -380,12 +405,14 @@ export const GiftHeader = ({
           display: flex;
           align-items: center;
           justify-content: space-between;
-          padding: 8px 12px;
+          padding: 10px 14px;
+          min-height: 44px;
           border-radius: var(--radius-md, 8px);
           text-decoration: none;
           color: var(--text-secondary, #59524C);
           font-size: var(--text-sm, 0.875rem);
           font-weight: 500;
+          box-sizing: border-box;
         }
 
         .drawer-nav-item:hover,

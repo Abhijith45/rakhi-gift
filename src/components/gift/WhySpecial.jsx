@@ -183,8 +183,8 @@ export const WhySpecial = ({
           display: flex;
           align-items: center;
           justify-content: center;
-          padding-top: var(--space-10, 2.5rem);
-          padding-bottom: var(--space-12, 3rem);
+          padding-top: var(--space-8, 2rem);
+          padding-bottom: var(--space-8, 2rem);
           position: relative;
           background: transparent;
         }
@@ -193,13 +193,13 @@ export const WhySpecial = ({
           max-width: 900px;
           width: 100%;
           margin: 0 auto;
-          padding: 0 1.5rem;
+          padding: 0 clamp(0.75rem, 3.5vw, 1.5rem);
         }
 
         .reasons-header {
           text-align: center;
           max-width: 680px;
-          margin: 0 auto var(--space-8, 2rem) auto;
+          margin: 0 auto var(--space-6, 1.5rem) auto;
         }
 
         .reasons-tag {
@@ -226,7 +226,7 @@ export const WhySpecial = ({
 
         .reasons-title {
           font-family: var(--gift-font-heading, 'Playfair Display', Georgia, serif);
-          font-size: clamp(2rem, 4vw, 2.75rem);
+          font-size: clamp(1.85rem, 4vw, 2.75rem);
           font-weight: 700;
           color: var(--gift-text, #1E1B18);
           margin-bottom: var(--space-2, 0.5rem);
@@ -259,15 +259,17 @@ export const WhySpecial = ({
           background: var(--gift-surface, #FFFDF9);
           border: 1px solid var(--gift-border, #E5D9C8);
           border-radius: var(--radius-xl, 24px);
-          padding: clamp(2rem, 5vw, 3.25rem);
+          padding: clamp(1.5rem, 4vw, 3rem) clamp(1.15rem, 3.5vw, 2.5rem);
           box-shadow: 
             0 16px 40px -8px var(--gift-shadow-tone, rgba(60, 45, 25, 0.08)),
             0 4px 14px -2px var(--gift-shadow-tone, rgba(60, 45, 25, 0.04));
           overflow: hidden;
-          min-height: 250px;
+          min-height: 220px;
           display: flex;
           flex-direction: column;
           justify-content: center;
+          transition: opacity 0.3s cubic-bezier(0.2, 0, 0, 1), transform 0.3s cubic-bezier(0.2, 0, 0, 1);
+        }
           transition: opacity 0.3s cubic-bezier(0.2, 0, 0, 1), transform 0.3s cubic-bezier(0.2, 0, 0, 1);
         }
 

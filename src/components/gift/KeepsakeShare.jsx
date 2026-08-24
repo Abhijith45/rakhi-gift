@@ -102,7 +102,7 @@ export const KeepsakeShare = ({
           background: var(--gift-surface, #FFFDF9);
           border: 1px solid var(--gift-border, #E5D9C8);
           border-radius: var(--radius-lg, 12px);
-          padding: clamp(2rem, 5vw, 3rem);
+          padding: clamp(1.75rem, 5vw, 3rem) clamp(1rem, 4vw, 2.5rem);
           text-align: center;
           box-shadow: 
             0 8px 24px -4px var(--gift-shadow-tone, rgba(60, 45, 25, 0.08)),
