@@ -47,6 +47,7 @@ model Gift {
   photos            GiftPhoto[]
   reasons           GiftReason[]
   memories          GiftMemory[]
+  funItems          GiftFunItem[]
   payments          Payment[]
   analytics         AnalyticsEvent[]
 
@@ -56,20 +57,21 @@ model Gift {
 }
 
 model GiftPhoto {
-  id                 String   @id @default(uuid())
+  id                 String       @id @default(uuid())
   giftId             String
-  gift               Gift     @relation(fields: [giftId], references: [id], onDelete: Cascade)
-  url                String   @db.Text
-  thumbnailUrl       String?  @db.Text
+  gift               Gift         @relation(fields: [giftId], references: [id], onDelete: Cascade)
+  url                String       @db.Text
+  thumbnailUrl       String?      @db.Text
   cloudinaryPublicId String?
   caption            String?
   date               String?
-  displayOrder       Int      @default(0)
-  aspectRatio        Float    @default(1.333)
-  width              Int?     @default(1600)
-  height             Int?     @default(1200)
-  frameVariant       String?  @default("classic") // classic, caption, note
-  createdAt          DateTime @default(now())
+  displayOrder       Int          @default(0)
+  aspectRatio        Float        @default(1.333)
+  width              Int?         @default(1600)
+  height             Int?         @default(1200)
+  frameVariant       String?      @default("classic") // classic, caption, note
+  createdAt          DateTime     @default(now())
+  memories           GiftMemory[]
 
   @@index([giftId])
   @@index([displayOrder])
@@ -88,15 +90,33 @@ model GiftReason {
 }
 
 model GiftMemory {
+  id                 String     @id @default(uuid())
+  giftId             String
+  gift               Gift       @relation(fields: [giftId], references: [id], onDelete: Cascade)
+  photoId            String?
+  photo              GiftPhoto? @relation(fields: [photoId], references: [id], onDelete: SetNull)
+  imageUrl           String?    @db.Text
+  thumbnailUrl       String?    @db.Text
+  cloudinaryPublicId String?
+  date               String
+  title              String
+  description        String     @db.Text
+  displayOrder       Int        @default(0)
+
+  @@index([giftId])
+  @@index([photoId])
+}
+
+model GiftFunItem {
   id           String   @id @default(uuid())
   giftId       String
   gift         Gift     @relation(fields: [giftId], references: [id], onDelete: Cascade)
-  date         String
-  title        String
-  description  String   @db.Text
+  question     String
+  answer       String   @db.Text
   displayOrder Int      @default(0)
 
   @@index([giftId])
+  @@index([displayOrder])
 }
 
 model Payment {

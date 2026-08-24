@@ -16,16 +16,20 @@ export const ImageCard = ({
   photo,
   index,
   total,
+  allowCaptions = true,
+  allowDates = true,
   onEditCrop,
   onRemove,
   onMoveUp,
   onMoveDown,
-  onCaptionChange
+  onCaptionChange,
+  onDateChange
 }) => {
   const {
     previewUrl,
     croppedDataUrl,
     caption = '',
+    date = '',
     status = 'READY', // 'NEEDS_CROP' | 'READY' | 'UPLOADING' | 'UPLOADED' | 'FAILED'
     error = null
   } = photo;
@@ -106,20 +110,36 @@ export const ImageCard = ({
         </div>
       </div>
 
-      {/* Caption & Controls Area */}
+      {/* Caption & Date Inputs Area */}
       <div className="card-bottom-content">
-        <div className="caption-input-container">
-          <MessageSquare size={13} className="caption-icon" />
-          <input
-            type="text"
-            className="card-caption-input"
-            placeholder="Add memory caption (e.g. Partners in crime ❤️)"
-            value={caption}
-            onChange={(e) => onCaptionChange(photo.id, e.target.value)}
-            maxLength={80}
-            aria-label={`Caption for photo ${index + 1}`}
-          />
-        </div>
+        {allowCaptions && (
+          <div className="caption-input-container">
+            <MessageSquare size={13} className="caption-icon" />
+            <input
+              type="text"
+              className="card-caption-input"
+              placeholder="Add caption (e.g. Partners in crime ❤️)"
+              value={caption}
+              onChange={(e) => onCaptionChange && onCaptionChange(photo.id, e.target.value)}
+              maxLength={80}
+              aria-label={`Caption for photo ${index + 1}`}
+            />
+          </div>
+        )}
+
+        {allowDates && (
+          <div className="caption-input-container date-input-container">
+            <input
+              type="text"
+              className="card-caption-input"
+              placeholder="Memory date (optional, e.g. Diwali 2019)"
+              value={date}
+              onChange={(e) => onDateChange && onDateChange(photo.id, e.target.value)}
+              maxLength={24}
+              aria-label={`Date for photo ${index + 1}`}
+            />
+          </div>
+        )}
 
         {/* Bottom Toolbar: Reorder & Edit Buttons */}
         <div className="card-actions-strip">
@@ -247,8 +267,10 @@ export const ImageCard = ({
           background: transparent;
           color: var(--text-muted);
           border: none;
-          padding: 4px;
-          border-radius: 4px;
+          padding: 6px;
+          min-width: 32px;
+          min-height: 32px;
+          border-radius: 6px;
           cursor: pointer;
           transition: all 0.2s;
           display: flex;
@@ -268,9 +290,8 @@ export const ImageCard = ({
           aspect-ratio: 4 / 3;
           border-radius: var(--radius-md);
           overflow: hidden;
-          background: #E8DEC8;
+          background: var(--bg-subtle);
           cursor: pointer;
-          border: 1px solid rgba(0, 0, 0, 0.08);
         }
 
         .thumbnail-img {
@@ -354,9 +375,10 @@ export const ImageCard = ({
           background: #FAF5ED;
           border: 1px solid var(--border-light);
           color: var(--text-primary);
-          padding: 4px 10px;
+          padding: 5px 10px;
+          min-height: 32px;
           border-radius: var(--radius-sm);
-          font-size: 11px;
+          font-size: 11.5px;
           font-weight: 600;
           cursor: pointer;
           transition: all 0.2s;
@@ -371,15 +393,17 @@ export const ImageCard = ({
         .reorder-btn-group {
           display: flex;
           align-items: center;
-          gap: 3px;
+          gap: 4px;
         }
 
         .btn-reorder {
           background: #FFFFFF;
           border: 1px solid var(--border-default);
           color: var(--text-secondary);
-          width: 24px;
-          height: 24px;
+          width: 32px;
+          height: 32px;
+          min-width: 32px;
+          min-height: 32px;
           border-radius: var(--radius-sm);
           display: flex;
           align-items: center;

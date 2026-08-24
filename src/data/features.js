@@ -1,25 +1,25 @@
 /**
- * How It Works Data
+ * Standardized How It Works & Feature Highlights Data
  */
 
 export const howItWorksSteps = [
   {
     step: "01",
     title: "Add your memories",
-    description: "Upload your favorite photos with your sibling. Add little captions, dates, and inside memories that make you both smile.",
-    highlight: "6–15 Photos Supported"
+    description: "Upload your favorite photos with your sister. Add optional captions, dates, and inside memories that make you both smile.",
+    highlight: "Up to 4–8 Photos Supported"
   },
   {
     step: "02",
-    title: "Make it truly yours",
-    description: "Write your heartfelt message, choose why they're special to you, add a surprise note, and pick an aesthetic theme.",
-    highlight: "Themes & Personal Touches"
+    title: "Make it truly personal",
+    description: "Write your heartfelt Rakhi letter, add reasons she is special, include timeline chapters, and pick a visual theme.",
+    highlight: "Themes & Inside Banter"
   },
   {
     step: "03",
-    title: "Give the gift",
-    description: "Get a private unique link and a beautiful QR code card to share directly on WhatsApp or wrap inside a physical card.",
-    highlight: "Instant Link & QR Card"
+    title: "Share your keepsake",
+    description: "Receive a private permanent link and a printable QR code card to share directly on WhatsApp or slip into a Rakhi hamper.",
+    highlight: "Private Link & QR Card"
   }
 ];
 
@@ -28,36 +28,38 @@ export const featureHighlights = [
     id: "wall",
     iconName: "Image",
     title: "3D Connected Memory Wall",
-    description: "Photos physically pinned to a warm textured wall and tied together with a sacred Rakhi thread."
+    description: "Your favorite photos mounted on a textured corkboard wall, physically connected by sacred red silk thread."
   },
   {
     id: "message",
     iconName: "Heart",
-    title: "Heartfelt Message",
-    description: "An intimate, editorial letter space designed to let your genuine emotions and gratitude shine."
+    title: "Heartfelt Rakhi Letter",
+    description: "An intimate editorial letter that opens with an interactive wax seal, written in your own words."
   },
   {
     id: "reasons",
     iconName: "Sparkles",
     title: "Why You're Special",
-    description: "Curated reasons reminding them of the unique bond, shared laughter, and quiet support you cherish."
+    description: "Curated personal reasons celebrating the shared laughter, unconditional support, and bond only siblings share."
+  },
+  {
+    id: "timeline",
+    iconName: "Calendar",
+    title: "Memory Timeline & Sibling Fun",
+    description: "Chronological milestone chapters and playful sibling superlatives that bring back your best childhood memories."
   },
   {
     id: "reveal",
     iconName: "Gift",
     title: "Interactive Surprise Reveal",
-    description: "A sealed digital envelope or gift card that unveils a final promise, voucher, or secret memory."
+    description: "A sealed digital envelope that unlocks a private gift voucher, secret promise, or special message with celebratory confetti."
   },
   {
     id: "share",
     iconName: "Share2",
-    title: "Private Shareable Link",
-    description: "A permanent, distraction-free link with no login required for the recipient to open on any device."
-  },
-  {
-    id: "qr",
-    iconName: "QrCode",
-    title: "Printable QR Code Card",
-    description: "Print a high-resolution QR card to attach to physical sweets, rakhis, or gift hampers."
+    title: "Private Link & Printable QR",
+    description: "A permanent, distraction-free web link with no login required, plus a printable high-resolution QR card."
   }
 ];
+
+export default { howItWorksSteps, featureHighlights };

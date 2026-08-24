@@ -1,6 +1,9 @@
+// env.js MUST be the first import — it loads server/.env before any other module
+// evaluates process.env at module load time (ESM hoists all imports together,
+// but dependency graph evaluation order ensures env.js runs before app modules)
+import './env.js';
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
 import path from 'path';
 import fs from 'fs';
 
@@ -9,8 +12,6 @@ import giftRoutes from './routes/giftRoutes.js';
 import paymentRoutes from './routes/paymentRoutes.js';
 import analyticsRoutes from './routes/analyticsRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
-
-dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;

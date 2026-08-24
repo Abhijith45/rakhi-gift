@@ -1,276 +1,119 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from '../router';
+import React, { useEffect, useRef } from 'react';
+import { useNavigate } from '../router/index.jsx';
 import {
   Sparkles,
   ArrowRight,
   ArrowLeft,
-  Upload,
-  Trash2,
   Heart,
-  Image as ImageIcon,
   CheckCircle,
-  QrCode,
   Copy,
   Share2,
   ExternalLink,
   ShieldCheck,
   Plus,
-  Lock,
-  Unlock,
-  AlertCircle
+  AlertCircle,
+  User,
+  Smile,
+  Mail,
+  MessageSquare,
+  Feather,
+  Gift
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import QRCode from 'qrcode';
 
-import Header from '../components/layout/Header';
-import Footer from '../components/layout/Footer';
-import Button from '../components/common/Button';
-import MemoryWall from '../components/memory-wall/MemoryWall';
-import ImageUploader from '../components/creator/image-upload/ImageUploader';
-import { themes, getThemeById } from '../data/themes';
-import { pricingTiers } from '../data/pricing';
+import Header from '../components/layout/Header.jsx';
+import Footer from '../components/layout/Footer.jsx';
+import Button from '../components/common/Button.jsx';
+import MemoryWall from '../components/memory-wall/MemoryWall.jsx';
+import GiftHero from '../components/gift/GiftHero.jsx';
+import RakhiMessage from '../components/gift/RakhiMessage.jsx';
+import WhySpecial from '../components/gift/WhySpecial.jsx';
+import MemoryTimeline from '../components/gift/MemoryTimeline.jsx';
+import SiblingFun from '../components/gift/SiblingFun.jsx';
+import SurpriseReveal from '../components/gift/SurpriseReveal.jsx';
+import FinalWish from '../components/gift/FinalWish.jsx';
+import KeepsakeShare from '../components/gift/KeepsakeShare.jsx';
+import ImageUploader from '../components/creator/image-upload/ImageUploader.jsx';
+
+import CreatorStepper from '../components/creator/CreatorStepper.jsx';
+import CreatorNavigation from '../components/creator/CreatorNavigation.jsx';
+import PackageSelector from '../components/creator/PackageSelector.jsx';
+import PreviewToolbar from '../components/creator/PreviewToolbar.jsx';
+import PersonalizeTabContainer from '../components/creator/personalize/PersonalizeTabContainer.jsx';
+
+import { useCreatorState } from '../hooks/useCreatorState.js';
+import { useCreatorDraft } from '../hooks/useCreatorDraft.js';
+import { useCreatorNavigation } from '../hooks/useCreatorNavigation.js';
+
+import { PLAN_CONFIG, getPlanConfig, isThemeAllowedForPlan } from '../config/planConfig.js';
+import { STEP_IDS, getStepById } from '../config/stepConfig.js';
+import { themes } from '../data/themes.js';
+import { getThemeCssVariables, validateTheme } from '../config/themeConfig.js';
+import { validateStep } from '../utils/creatorValidation.js';
 import {
-  createDraftGift,
-  updateGiftDraft,
   uploadGiftPhotos,
-  deleteGiftPhoto,
   createPaymentOrder,
   verifyPaymentSignature,
   getPaymentOrderStatus,
   trackEvent
-} from '../services/api';
-
-const INITIAL_REASONS = [
-  { number: "01", title: "Always Having My Back", text: "Even when I make the worst mistakes, you never judge — you just help me fix them." },
-  { number: "02", title: "Our Secret Eyebrow Talks", text: "We can communicate an entire paragraph across a crowded family dinner with one look." },
-  { number: "03", title: "Best Playlist Curator", text: "Every great road trip memory we have is tied to the songs you queued up." },
-  { number: "04", title: "Forever Loyalty", text: "You'll roast me for an hour straight, but defend me fiercely against the rest of the world." }
-];
+} from '../services/api.js';
 
 export const CreatorPage = () => {
   const navigate = useNavigate();
-  const fileInputRef = useRef(null);
 
-  // Flow State: 1: Details, 2: Photos, 3: Message, 4: Reasons, 5: Theme, 6: Preview, 7: Payment, 8: Complete
-  const [currentStep, setCurrentStep] = useState(1);
-  const [draftId, setDraftId] = useState(null);
-  const [giftSlug, setGiftSlug] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState('');
-  const [paymentState, setPaymentState] = useState('IDLE'); // 'IDLE' | 'CREATING_ORDER' | 'CHECKOUT_OPEN' | 'VERIFYING' | 'PAID' | 'FAILED'
-  const [paymentReceipt, setPaymentReceipt] = useState(null);
+  // 1. Centralized State Architecture
+  const {
+    builderData,
+    setBuilderData,
+    updateBuilderData,
+    uiState,
+    setUIState,
+    updateUIState
+  } = useCreatorState();
 
-  // Form State
-  const [senderName, setSenderName] = useState('Ananya');
-  const [recipientName, setRecipientName] = useState('Aarav');
-  const [relationship, setRelationship] = useState('Brother');
-  const [senderNickname, setSenderNickname] = useState('');
-  const [recipientNickname, setRecipientNickname] = useState('');
+  // 2. Draft Persistence Hook (Hydrates from localStorage / Backend)
+  const { saveDraftCheckpoint } = useCreatorDraft(builderData, setBuilderData, setUIState);
 
-  const [photos, setPhotos] = useState([
-    {
-      id: "photo-1",
-      title: "Childhood Chaos",
-      caption: "When we thought mud puddles were swimming pools.",
-      date: "Summer 2014",
-      imageUrl: "https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=800&q=80",
-      aspectRatio: 1.25
-    },
-    {
-      id: "photo-2",
-      title: "First Cooking Disaster",
-      caption: "Burnt maggi, smoked kitchen, but we laughed for hours.",
-      date: "Diwali 2017",
-      imageUrl: "https://images.unsplash.com/photo-1516627145497-ae6968895b74?auto=format&fit=crop&w=800&q=80",
-      aspectRatio: 0.85
-    },
-    {
-      id: "photo-3",
-      title: "Graduation Day Cheer",
-      caption: "You yelled louder than anyone else in the auditorium.",
-      date: "Spring 2021",
-      imageUrl: "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=800&q=80",
-      aspectRatio: 1.3
-    },
-    {
-      id: "photo-4",
-      title: "Terrace Talks",
-      caption: "Solving all the world's problems over chai.",
-      date: "Monsoon 2022",
-      imageUrl: "https://images.unsplash.com/photo-1511895426328-dc8714191300?auto=format&fit=crop&w=800&q=80",
-      aspectRatio: 0.9
-    },
-    {
-      id: "photo-5",
-      title: "Goa Road Trip",
-      caption: "Flat tire, zero network, but the best playlist ever.",
-      date: "Winter 2023",
-      imageUrl: "https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?auto=format&fit=crop&w=800&q=80",
-      aspectRatio: 1.35
-    },
-    {
-      id: "photo-6",
-      title: "Partners in Crime",
-      caption: "Forever teammate, through thick and thin.",
-      date: "Always",
-      imageUrl: "https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?auto=format&fit=crop&w=800&q=80",
-      aspectRatio: 0.88
-    }
-  ]);
+  // 3. Package-Aware Step Navigation Hook
+  const {
+    steps,
+    currentStepId,
+    goToStep,
+    nextStep,
+    previousStep,
+    handlePackageChangeRequest
+  } = useCreatorNavigation(builderData, uiState, setUIState);
 
-  const [message, setMessage] = useState(
-    "No matter how many miles separate us or how busy life gets, you will always be the first person I turn to when I need a laugh, an honest opinion, or someone to split the last slice of pizza. Thank you for always protecting me, cheering for my craziest dreams, and never letting me forget where we came from. Happy Raksha Bandhan! ❤️"
-  );
-
-  const [reasons, setReasons] = useState(INITIAL_REASONS);
-  const [surprise, setSurprise] = useState({
-    badge: "A Little Surprise For You",
-    title: "One Last Promise...",
-    message: "I booked our tickets for that concert we've been wanting to attend since 2019! Check your email this weekend. Here's to making 100 more memories together.",
-    voucher: "FLIGHT & CONCERT PASS — NOVEMBER 2026",
-    note: "Claimable anytime. Non-negotiable sibling date!"
-  });
-
-  const [selectedTheme, setSelectedTheme] = useState('warm-memory');
-  const [selectedPlan, setSelectedPlan] = useState('PREMIUM');
-  const [qrCodeDataUrl, setQrCodeDataUrl] = useState('');
-  const [copiedLink, setCopiedLink] = useState(false);
-  const [showWallModal, setShowWallModal] = useState(false);
+  const activePlanConfig = getPlanConfig(builderData.plan);
 
   // Track creator start
   useEffect(() => {
     trackEvent('create_started');
   }, []);
 
-  // Handle Razorpay redirect callback — when Razorpay redirects user back to /create?order_id=...&status=processing
+  // Handle Razorpay redirect callback
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const orderId = params.get('order_id');
-    const paymentId = params.get('payment_id');
     const status = params.get('status');
 
     if (orderId && status === 'processing') {
-      // Clean URL so refresh doesn't re-trigger
       window.history.replaceState({}, '', '/create');
-      setPaymentState('VERIFYING');
-      setLoading(true);
-      setCurrentStep(7);
-      // Start polling — webhook or callback handler will activate the gift
+      updateUIState({ paymentState: 'VERIFYING', loading: true });
+      goToStep(STEP_IDS.PAYMENT);
       pollPaymentStatus(orderId);
     } else if (status === 'failed') {
       window.history.replaceState({}, '', '/create');
-      setPaymentState('FAILED');
-      setErrorMsg('Payment was cancelled or failed. Please try again.');
-      setCurrentStep(7);
+      updateUIState({
+        paymentState: 'FAILED',
+        errorMsg: 'Payment was cancelled or failed. Please try again.'
+      });
+      goToStep(STEP_IDS.PAYMENT);
     }
   }, []);
 
-  // Save / Sync Draft to Backend
-  const saveDraft = async () => {
-    try {
-      setLoading(true);
-      setErrorMsg('');
-
-      const payload = {
-        senderName,
-        recipientName,
-        relationship,
-        senderNickname,
-        recipientNickname,
-        theme: selectedTheme,
-        message,
-        plan: selectedPlan,
-        reasons,
-        surprise
-      };
-
-      if (!draftId) {
-        const created = await createDraftGift(payload);
-        setDraftId(created.id);
-        setGiftSlug(created.slug);
-        return created;
-      } else {
-        const updated = await updateGiftDraft(draftId, payload);
-        setGiftSlug(updated.slug);
-        return updated;
-      }
-    } catch (err) {
-      console.error('Draft save failed:', err);
-      setErrorMsg(err.message || 'Failed to save draft progress.');
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Step 1 -> Step 2
-  const handleStep1Next = async () => {
-    if (!senderName.trim() || !recipientName.trim()) {
-      setErrorMsg('Please enter both your name and your sibling’s name.');
-      return;
-    }
-    await saveDraft();
-    setCurrentStep(2);
-  };
-
-  // Step 2 -> Step 3
-  const handleStep2Next = async () => {
-    if (photos.length < 1) {
-      setErrorMsg('Please add at least 1 photo memory to continue.');
-      return;
-    }
-
-    try {
-      setLoading(true);
-      setErrorMsg('');
-
-      let currentGiftId = draftId;
-      if (!currentGiftId) {
-        const created = await saveDraft();
-        currentGiftId = created.id;
-      }
-
-      // Upload any local base64/cropped photos to Cloudinary/backend
-      const unuploaded = photos.filter((p) => !p.cloudinaryPublicId && (p.imageUrl || p.url));
-      if (unuploaded.length > 0 && currentGiftId) {
-        const payloadPhotos = unuploaded.map((p) => ({
-          data: p.imageUrl || p.url,
-          caption: p.caption || null,
-          frameVariant: p.caption ? 'caption' : 'classic',
-          displayOrder: p.displayOrder
-        }));
-        try {
-          await uploadGiftPhotos(currentGiftId, { photos: payloadPhotos });
-        } catch (e) {
-          console.warn('Background upload sync notice:', e);
-        }
-      }
-
-      await saveDraft();
-      setCurrentStep(3);
-    } catch (err) {
-      console.error('Step 2 continue error:', err);
-      setErrorMsg('Failed to save memories. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Add a Reason
-  const handleAddReason = () => {
-    if (reasons.length >= 6) return;
-    const nextNum = reasons.length + 1;
-    setReasons((prev) => [
-      ...prev,
-      {
-        number: `0${nextNum}`,
-        title: `Special Reason #${nextNum}`,
-        text: "Another reason why you're simply the best sibling in the world."
-      }
-    ]);
-  };
-
-  // Helper to dynamically load Razorpay Checkout SDK
+  // Razorpay script loader
   const loadRazorpayScript = () => {
     return new Promise((resolve) => {
       if (window.Razorpay) {
@@ -285,72 +128,75 @@ export const CreatorPage = () => {
     });
   };
 
-  // Poll server payment status for asynchronous webhook/callback reconciliation
+  // Poll payment order status
   const pollPaymentStatus = async (orderId) => {
     let attempts = 0;
-    const maxAttempts = 20; // 20 × 3s = 60 seconds total wait time
+    const maxAttempts = 20;
     const interval = setInterval(async () => {
       attempts++;
       try {
-        // api.js already unwraps response.data.data, so res IS the data object
         const res = await getPaymentOrderStatus(orderId);
         if (res?.isReady || (res?.paymentStatus === 'PAID' && res?.giftStatus === 'ACTIVE')) {
           clearInterval(interval);
           await handlePaymentConfirmed(res);
         } else if (res?.paymentStatus === 'FAILED') {
           clearInterval(interval);
-          setPaymentState('FAILED');
-          setErrorMsg("Payment wasn't completed. You can try again.");
-          setLoading(false);
+          updateUIState({
+            paymentState: 'FAILED',
+            errorMsg: "Payment wasn't completed. You can try again.",
+            loading: false
+          });
         } else if (attempts >= maxAttempts) {
           clearInterval(interval);
-          setPaymentState('FAILED');
-          setErrorMsg('Payment is taking longer than usual. If your money was debited, your gift will activate automatically within a few minutes.');
-          setLoading(false);
+          updateUIState({
+            paymentState: 'FAILED',
+            errorMsg: 'Payment is taking longer than usual. Your gift will activate automatically within a few minutes.',
+            loading: false
+          });
         }
       } catch (e) {
         if (attempts >= maxAttempts) {
           clearInterval(interval);
-          setPaymentState('FAILED');
-          setErrorMsg('Connection issue — if payment was made, your gift will activate automatically via our webhook system.');
-          setLoading(false);
+          updateUIState({
+            paymentState: 'FAILED',
+            errorMsg: 'Connection issue — your gift will activate automatically via our webhook system.',
+            loading: false
+          });
         }
-        // else: keep polling on transient network errors
       }
     }, 3000);
   };
 
-  // Process verified payment confirmation and unlock URL + QR
+  // Payment Confirmed Handler
   const handlePaymentConfirmed = async (data) => {
     const finalSlug = data.slug;
-    setGiftSlug(finalSlug);
-    setPaymentReceipt({
-      plan: data.plan || selectedPlan,
-      amount: data.amount || (selectedPlan === 'BASIC' ? 99 : selectedPlan === 'DELUXE' ? 449 : 249),
-      currency: data.currency || 'INR',
-      orderId: data.orderId || `order_${Date.now()}`,
-      paidAt: data.paidAt || new Date().toISOString()
+    updateBuilderData({ giftSlug: finalSlug });
+    updateUIState({
+      paymentReceipt: {
+        plan: data.plan || builderData.plan,
+        amount: data.amount || activePlanConfig.price,
+        currency: data.currency || 'INR',
+        orderId: data.orderId || `order_${Date.now()}`,
+        paidAt: data.paidAt || new Date().toISOString()
+      }
     });
 
-    // Generate High-Res QR Code Data URL only after verified activation
     const fullGiftUrl = `${window.location.origin}/g/${finalSlug}`;
     const qrData = await QRCode.toDataURL(fullGiftUrl, {
       width: 360,
       margin: 2,
-      color: {
-        dark: '#1C1917',
-        light: '#FFFDF9'
-      }
+      color: { dark: '#1C1917', light: '#FFFDF9' }
     });
-    setQrCodeDataUrl(qrData);
 
-    setPaymentState('PAID');
-    setLoading(false);
+    updateUIState({
+      qrCodeDataUrl: qrData,
+      paymentState: 'PAID',
+      loading: false
+    });
 
-    await trackEvent('payment_success', { plan: selectedPlan, slug: finalSlug });
+    await trackEvent('payment_success', { plan: builderData.plan, slug: finalSlug });
     await trackEvent('gift_created', { slug: finalSlug });
 
-    // Trigger Celebration Confetti
     confetti({
       particleCount: 120,
       spread: 90,
@@ -358,74 +204,48 @@ export const CreatorPage = () => {
       colors: ['#9B2226', '#D4AF37', '#D96B43', '#FFF8F0']
     });
 
-    setCurrentStep(8); // Unlock and navigate to Success Screen
+    goToStep(STEP_IDS.SUCCESS);
   };
 
   // Initiate Payment & Razorpay Checkout
   const handleInitiatePayment = async () => {
     try {
-      setLoading(true);
-      setErrorMsg('');
-      setPaymentState('CREATING_ORDER');
-      await trackEvent('payment_started', { plan: selectedPlan, giftId: draftId });
+      updateUIState({ loading: true, errorMsg: '', paymentState: 'CREATING_ORDER' });
+      await trackEvent('payment_started', { plan: builderData.plan, giftId: builderData.draftId });
 
-      let currentGiftId = draftId;
-      if (!currentGiftId) {
-        const created = await saveDraft();
-        currentGiftId = created.id;
+      let currentGift = builderData;
+      if (!currentGift.draftId) {
+        const created = await saveDraftCheckpoint();
+        currentGift = { ...currentGift, draftId: created.id };
       }
 
-      // 1. Create order on backend
-      const orderRes = await createPaymentOrder(currentGiftId, selectedPlan);
+      const orderRes = await createPaymentOrder(currentGift.draftId, currentGift.plan);
       const orderData = orderRes.data || orderRes;
-
-      // 2. Load Razorpay Checkout SDK
       const isLoaded = await loadRazorpayScript();
 
-      if (isLoaded && window.Razorpay && !orderData.isSandbox) {
-        setPaymentState('CHECKOUT_OPEN');
+      if (isLoaded && window.Razorpay) {
+        updateUIState({ paymentState: 'CHECKOUT_OPEN' });
+        const lockedAmountInPaise = orderData.amountInPaise || (orderData.amount * 100);
+
         const rzpOptions = {
-          key: orderData.keyId,
-          amount: orderData.amount * 100,
+          key: orderData.keyId || import.meta.env?.VITE_RAZORPAY_KEY_ID,
+          amount: lockedAmountInPaise,
           currency: orderData.currency || 'INR',
           name: 'Rakhi Memory Keepsake',
-          description: `${selectedPlan} Tier for ${recipientName}`,
+          description: orderData.planDescription || `${activePlanConfig.name} for ${builderData.recipientName}`,
           image: '/favicon.ico',
           order_id: orderData.orderId,
           prefill: {
-            name: senderName
+            name: builderData.senderName,
+            email: builderData.creatorEmail || undefined
           },
-          theme: {
-            color: '#9B2226'
-          },
-          // Enable all payment methods including UPI
-          method: {
-            upi: true,
-            card: true,
-            netbanking: true,
-            wallet: true,
-            emi: false
-          },
-          config: {
-            display: {
-              blocks: {
-                utib: {
-                  name: 'Pay via UPI',
-                  instruments: [
-                    { method: 'upi', flows: ['qr', 'intent', 'collect', 'vpa'] }
-                  ]
-                }
-              },
-              sequence: ['block.utib'],
-              preferences: { show_default_blocks: true }
-            }
-          },
+          theme: { color: '#9B2226' },
+          method: { upi: true, card: true, netbanking: true, wallet: true, emi: false },
           handler: async function (response) {
-            setPaymentState('VERIFYING');
+            updateUIState({ paymentState: 'VERIFYING' });
             try {
-              // api.js unwraps response.data.data, so verifyRes IS the inner data object
               const verifyRes = await verifyPaymentSignature({
-                giftId: currentGiftId,
+                giftId: currentGift.draftId,
                 razorpayOrderId: response.razorpay_order_id || orderData.orderId,
                 razorpayPaymentId: response.razorpay_payment_id,
                 razorpaySignature: response.razorpay_signature
@@ -434,76 +254,149 @@ export const CreatorPage = () => {
               if (verifyRes?.isReady || verifyRes?.paymentStatus === 'PAID') {
                 await handlePaymentConfirmed(verifyRes);
               } else {
-                // Verification returned but not yet active — poll for webhook
                 await pollPaymentStatus(orderData.orderId);
               }
             } catch (err) {
-              console.warn('Immediate verification pending webhook, starting polling:', err);
               await pollPaymentStatus(orderData.orderId);
             }
           },
           modal: {
             ondismiss: function () {
-              if (paymentState !== 'PAID') {
-                setPaymentState('IDLE');
-                setLoading(false);
+              if (uiState.paymentState !== 'PAID') {
+                updateUIState({ paymentState: 'IDLE', loading: false });
               }
             }
           },
-          // Razorpay redirect callback (fallback for mobile/UPI redirect flows)
-          callback_url: `${window.location.origin.replace('3000', '5000')}/api/payments/callback`,
+          callback_url: `${(import.meta.env?.VITE_API_BASE_URL || '/api').replace('/api', '')}/api/payments/callback`,
           redirect: false
         };
 
         const rzp = new window.Razorpay(rzpOptions);
         rzp.on('payment.failed', function (response) {
-          console.error('Razorpay payment failed:', response.error);
-          setPaymentState('FAILED');
-          setErrorMsg(response.error.description || 'Payment was declined or failed.');
-          setLoading(false);
+          updateUIState({
+            paymentState: 'FAILED',
+            errorMsg: response.error.description || 'Payment was declined or failed.',
+            loading: false
+          });
         });
         rzp.open();
       } else {
-        // Razorpay SDK unavailable (e.g. ad blocker): skip checkout, poll for webhook activation
-        setPaymentState('VERIFYING');
-        setErrorMsg('Razorpay checkout is unavailable. If you complete payment via UPI or bank transfer, your gift will activate automatically.');
+        updateUIState({
+          paymentState: 'VERIFYING',
+          errorMsg: 'Razorpay checkout unavailable. Will poll for webhook confirmation.'
+        });
         await pollPaymentStatus(orderData.orderId);
       }
     } catch (err) {
-      console.error('Payment error:', err);
-      setPaymentState('FAILED');
-      setErrorMsg(err.message || 'Payment initiation failed. Please try again.');
-      await trackEvent('payment_failed', { plan: selectedPlan });
-      setLoading(false);
+      updateUIState({
+        paymentState: 'FAILED',
+        errorMsg: err.message || 'Payment initiation failed.',
+        loading: false
+      });
+      await trackEvent('payment_failed', { plan: builderData.plan });
     }
   };
 
-  // Copy Gift Link to Clipboard
+  // Copy Link Handler
   const handleCopyLink = () => {
-    const fullUrl = `${window.location.origin}/g/${giftSlug}`;
+    const fullUrl = `${window.location.origin}/g/${builderData.giftSlug}`;
     navigator.clipboard.writeText(fullUrl);
-    setCopiedLink(true);
-    trackEvent('share_clicked', { slug: giftSlug });
-    setTimeout(() => setCopiedLink(false), 2500);
+    updateUIState({ copiedLink: true });
+    trackEvent('share_clicked', { slug: builderData.giftSlug });
+    setTimeout(() => updateUIState({ copiedLink: false }), 2500);
   };
 
-  // Dynamic preview gift object
+  // Generic Next Step Handler with Checkpoint Save
+  const handleNextWithSave = async () => {
+    const validation = validateStep(currentStepId, builderData, builderData.plan);
+    if (!validation.isValid) {
+      updateUIState({ errorMsg: validation.error });
+      return;
+    }
+
+    try {
+      await saveDraftCheckpoint();
+      nextStep();
+    } catch (err) {
+      // Save checkpoint handled error state
+    }
+  };
+
+  // Step 2 Package Selector Next Handler
+  const handlePackageSelectNext = async () => {
+    // If photos count exceeds new package max limit, show warning but don't delete extra photos
+    if (builderData.photos.length > activePlanConfig.maxPhotos) {
+      updateUIState({
+        errorMsg: `The ${activePlanConfig.name} supports up to ${activePlanConfig.maxPhotos} photos. Please select ${activePlanConfig.maxPhotos} active photos in the next step.`
+      });
+    }
+    await saveDraftCheckpoint();
+    nextStep();
+  };
+
+  // Step 3 Photo Upload Sync Handler
+  const handlePhotosStepNext = async () => {
+    if (builderData.photos.length < 1) {
+      updateUIState({ errorMsg: 'Please add at least 1 photo memory to continue.' });
+      return;
+    }
+
+    try {
+      updateUIState({ loading: true, errorMsg: '' });
+      let savedGift = await saveDraftCheckpoint();
+      const currentGiftId = savedGift?.id || builderData.draftId;
+
+      // Upload local images to Cloudinary
+      const unuploaded = builderData.photos.filter((p) => !p.cloudinaryPublicId && (p.imageUrl || p.url));
+      if (unuploaded.length > 0 && currentGiftId) {
+        const payloadPhotos = unuploaded.map((p) => ({
+          data: p.imageUrl || p.url,
+          caption: p.caption || null,
+          date: p.date || null,
+          frameVariant: p.caption ? 'caption' : 'classic',
+          displayOrder: p.displayOrder
+        }));
+        try {
+          await uploadGiftPhotos(currentGiftId, { photos: payloadPhotos });
+        } catch (e) {
+          console.warn('Photo upload background sync:', e);
+        }
+      }
+
+      await saveDraftCheckpoint();
+      nextStep();
+    } catch (err) {
+      updateUIState({ errorMsg: 'Failed to save photo memories. Please try again.' });
+    } finally {
+      updateUIState({ loading: false });
+    }
+  };
+
+  // Active photos slice based on plan
+  const activePhotos = builderData.photos.slice(0, activePlanConfig.maxPhotos);
+
+  // Dynamic preview gift object consuming real builder data
   const previewGiftData = {
-    id: draftId || 'preview-draft',
-    slug: giftSlug || 'preview-slug',
-    recipientName,
-    senderName,
-    relationship,
-    theme: selectedTheme,
+    id: builderData.draftId || 'preview-draft',
+    slug: builderData.giftSlug || 'preview-slug',
+    recipientName: builderData.recipientName || 'Sister',
+    senderName: builderData.senderName || 'Brother',
+    relationship: 'Sister',
+    senderNickname: builderData.senderNickname,
+    recipientNickname: builderData.recipientNickname,
+    plan: builderData.plan,
+    theme: builderData.theme,
     message: {
-      salutation: `Dearest ${recipientNickname || recipientName},`,
-      body: message,
-      signoff: "Forever your loving sibling,",
-      sender: senderNickname || senderName
+      salutation: `Dearest ${builderData.recipientNickname || builderData.recipientName || 'Sister'},`,
+      body: builderData.message || 'Happy Raksha Bandhan! ❤️',
+      signoff: 'Forever your brother,',
+      sender: builderData.senderNickname || builderData.senderName || 'Brother'
     },
-    reasons,
-    surprise,
-    photos: photos.map((p, idx) => ({
+    reasons: activePlanConfig.reasons ? builderData.reasons : [],
+    memories: activePlanConfig.timeline ? builderData.memories : [],
+    funItems: activePlanConfig.siblingFun ? builderData.funItems : [],
+    surprise: builderData.surprise,
+    photos: activePhotos.map((p, idx) => ({
       ...p,
       desktop: p.desktop || {
         x: -3.6 + (idx % 4) * 2.4,
@@ -520,14 +413,7 @@ export const CreatorPage = () => {
         scale: 0.85
       },
       pin: { x: 0, y: 0.9, z: 0.12 }
-    })),
-    threadConnections: [
-      { from: photos[0]?.id, to: photos[1]?.id },
-      { from: photos[1]?.id, to: photos[2]?.id },
-      { from: photos[2]?.id, to: photos[3]?.id },
-      ...(photos.length > 4 ? [{ from: photos[3]?.id, to: photos[4]?.id }] : []),
-      ...(photos.length > 5 ? [{ from: photos[4]?.id, to: photos[5]?.id }] : [])
-    ]
+    }))
   };
 
   return (
@@ -535,446 +421,522 @@ export const CreatorPage = () => {
       <Header />
 
       <main className="creator-main-container">
-        {/* Progress Stepper Bar */}
-        {currentStep < 8 && (
-          <div className="creator-stepper-header">
-            <div className="container stepper-inner">
-              <div className="stepper-meta">
-                <span className="step-pill">Step {currentStep} of 7</span>
-                <h2 className="step-heading">
-                  {currentStep === 1 && "Who is this Rakhi memory for?"}
-                  {currentStep === 2 && "Mount your cherished photos"}
-                  {currentStep === 3 && "Write your heartfelt message"}
-                  {currentStep === 4 && "Special reasons & surprise note"}
-                  {currentStep === 5 && "Choose an aesthetic theme"}
-                  {currentStep === 6 && "Live gift experience preview"}
-                  {currentStep === 7 && "Select keepsake tier & activate"}
-                </h2>
-              </div>
-
-              {/* Progress Indicator */}
-              <div className="stepper-track">
-                <div
-                  className="stepper-progress-bar"
-                  style={{ width: `${(currentStep / 7) * 100}%` }}
-                />
-              </div>
-            </div>
-          </div>
-        )}
+        {/* Dynamic Stepper Progress Bar */}
+        <CreatorStepper
+          currentStepId={currentStepId}
+          planKey={builderData.plan}
+          onStepClick={goToStep}
+        />
 
         <div className="container creator-content-container">
-          {errorMsg && (
+          {uiState.errorMsg && (
             <div className="creator-error-banner animate-fade-in">
               <AlertCircle size={18} />
-              <span>{errorMsg}</span>
+              <span>{uiState.errorMsg}</span>
             </div>
           )}
 
           {/* ============================================================ */}
-          {/* STEP 1: DETAILS */}
+          {/* STEP 1: DETAILS (Brother -> Sister Focus) */}
           {/* ============================================================ */}
-          {currentStep === 1 && (
+          {currentStepId === STEP_IDS.DETAILS && (
             <div className="creator-step-card paper-card animate-fade-in">
-              <h3 className="card-title">Recipient & Sender Details</h3>
+              <div className="step-badge-pill">
+                <Sparkles size={13} />
+                <span>Step 1 of 7 • Sibling Personalization</span>
+              </div>
+
+              <h3 className="card-title">Create a special Rakhi gift for your sister ❤️</h3>
               <p className="card-subtitle">
-                Personalize who is giving and receiving this digital keepsake.
+                Personalize who is giving and receiving this digital keepsake. These names are woven into the 3D memory wall, the sealed letter, and custom keepsake links.
               </p>
 
               <div className="form-grid">
+                {/* Brother's Name */}
                 <div className="form-group">
-                  <label className="form-label">Sibling's Name (Recipient) *</label>
-                  <input
-                    type="text"
-                    className="form-input"
-                    placeholder="e.g. Aarav"
-                    value={recipientName}
-                    onChange={(e) => setRecipientName(e.target.value)}
-                    maxLength={32}
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">Your Name (Sender) *</label>
-                  <input
-                    type="text"
-                    className="form-input"
-                    placeholder="e.g. Ananya"
-                    value={senderName}
-                    onChange={(e) => setSenderName(e.target.value)}
-                    maxLength={32}
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">Relationship *</label>
-                  <div className="radio-pill-group">
-                    <button
-                      type="button"
-                      className={`radio-pill ${relationship === 'Brother' ? 'active' : ''}`}
-                      onClick={() => setRelationship('Brother')}
-                    >
-                      👦 Brother
-                    </button>
-                    <button
-                      type="button"
-                      className={`radio-pill ${relationship === 'Sister' ? 'active' : ''}`}
-                      onClick={() => setRelationship('Sister')}
-                    >
-                      👧 Sister
-                    </button>
+                  <label className="form-label">
+                    <span>Brother's Name (Your Name) <span className="required-star">*</span></span>
+                  </label>
+                  <div className="input-wrapper">
+                    <User size={18} className="input-leading-icon" />
+                    <input
+                      type="text"
+                      className="form-input has-leading-icon"
+                      placeholder="e.g. Aarav"
+                      value={builderData.senderName}
+                      onChange={(e) => updateBuilderData({ senderName: e.target.value })}
+                      maxLength={32}
+                    />
                   </div>
+                  <span className="input-helper-text">Appears on the gift letter sign-off & hero greeting</span>
                 </div>
 
+                {/* Brother's Nickname */}
                 <div className="form-group">
-                  <label className="form-label">Sibling Nickname (Optional)</label>
-                  <input
-                    type="text"
-                    className="form-input"
-                    placeholder="e.g. Motu, Golu, Bhai"
-                    value={recipientNickname}
-                    onChange={(e) => setRecipientNickname(e.target.value)}
-                    maxLength={24}
-                  />
+                  <label className="form-label">
+                    <span>Brother's Nickname</span>
+                    <span className="optional-pill">Optional</span>
+                  </label>
+                  <div className="input-wrapper">
+                    <Smile size={18} className="input-leading-icon" />
+                    <input
+                      type="text"
+                      className="form-input has-leading-icon"
+                      placeholder="e.g. Bhai, Bhaiya, Sonu"
+                      value={builderData.senderNickname}
+                      onChange={(e) => updateBuilderData({ senderNickname: e.target.value })}
+                      maxLength={24}
+                    />
+                  </div>
+                  <span className="input-helper-text">Used for playful moments & banter</span>
+                </div>
+
+                {/* Sister's Name */}
+                <div className="form-group">
+                  <label className="form-label">
+                    <span>Sister's Name (Recipient) <span className="required-star">*</span></span>
+                  </label>
+                  <div className="input-wrapper">
+                    <Heart size={18} className="input-leading-icon icon-pink" />
+                    <input
+                      type="text"
+                      className="form-input has-leading-icon"
+                      placeholder="e.g. Ananya"
+                      value={builderData.recipientName}
+                      onChange={(e) => updateBuilderData({ recipientName: e.target.value })}
+                      maxLength={32}
+                    />
+                  </div>
+                  <span className="input-helper-text">Primary name displayed on the 3D wall & wax seal</span>
+                </div>
+
+                {/* Sister's Nickname */}
+                <div className="form-group">
+                  <label className="form-label">
+                    <span>Sister's Nickname</span>
+                    <span className="optional-pill">Optional</span>
+                  </label>
+                  <div className="input-wrapper">
+                    <Sparkles size={18} className="input-leading-icon icon-gold" />
+                    <input
+                      type="text"
+                      className="form-input has-leading-icon"
+                      placeholder="e.g. Chhoti, Golu, Didi"
+                      value={builderData.recipientNickname}
+                      onChange={(e) => updateBuilderData({ recipientNickname: e.target.value })}
+                      maxLength={24}
+                    />
+                  </div>
+                  <span className="input-helper-text">Affectionate name for the letter salutation</span>
+                </div>
+
+                {/* Email for Receipt & Backup */}
+                <div className="form-group full-width">
+                  <label className="form-label">
+                    <span>Your Email for Receipt & Link Backup</span>
+                    <span className="optional-pill">Recommended</span>
+                  </label>
+                  <div className="input-wrapper">
+                    <Mail size={18} className="input-leading-icon" />
+                    <input
+                      type="email"
+                      className="form-input has-leading-icon"
+                      placeholder="e.g. aarav@gmail.com"
+                      value={builderData.creatorEmail}
+                      onChange={(e) => updateBuilderData({ creatorEmail: e.target.value })}
+                    />
+                  </div>
+                  <span className="input-helper-text">We'll email you a permanent backup of your unique gift link and order receipt.</span>
                 </div>
               </div>
 
-              <div className="step-actions">
-                <div />
-                <Button
-                  variant="primary"
-                  size="md"
-                  onClick={handleStep1Next}
-                  disabled={loading}
-                  icon={<ArrowRight size={16} />}
-                  iconPosition="right"
-                >
-                  {loading ? 'Saving...' : 'Continue to Photos'}
-                </Button>
-              </div>
+              <CreatorNavigation
+                isFirstStep={true}
+                onNext={handleNextWithSave}
+                nextText="Continue to Package"
+                loading={uiState.loading}
+              />
             </div>
           )}
 
           {/* ============================================================ */}
-          {/* STEP 2: PHOTOS */}
+          {/* STEP 2: PACKAGE SELECTION (Moved Early) */}
           {/* ============================================================ */}
-          {currentStep === 2 && (
+          {currentStepId === STEP_IDS.PACKAGE && (
+            <PackageSelector
+              selectedPlan={builderData.plan}
+              onSelectPlan={(planId) => {
+                const planConfig = getPlanConfig(planId);
+                updateBuilderData({
+                  plan: planId,
+                  // If switching to Basic and current theme is not allowed, reset to default theme
+                  theme: isThemeAllowedForPlan(builderData.theme, planId)
+                    ? builderData.theme
+                    : planConfig.defaultTheme
+                });
+              }}
+              onContinue={handlePackageSelectNext}
+            />
+          )}
+
+          {/* ============================================================ */}
+          {/* STEP 3: MOUNTED MEMORIES (PHOTOS) */}
+          {/* ============================================================ */}
+          {currentStepId === STEP_IDS.MEMORIES && (
             <div className="creator-step-card paper-card animate-fade-in">
               <div className="photos-header">
                 <div>
-                  <h3 className="card-title">Add & Crop Your Memories ({photos.length}/8)</h3>
+                  <h3 className="card-title">
+                    Add & Crop Your Memories ({builderData.photos.length}/{activePlanConfig.maxPhotos})
+                  </h3>
                   <p className="card-subtitle">
-                    Select up to 8 photos. Each image is cropped to 4:3 for the physical wire-grid Memory Wall.
+                    Select up to {activePlanConfig.maxPhotos} photos for your {activePlanConfig.name}. Each image is mounted onto the 3D connected Memory Wall.
                   </p>
                 </div>
               </div>
+
+              {/* Notice if photos exceed package limit */}
+              {builderData.photos.length > activePlanConfig.maxPhotos && (
+                <div className="info-notice-box">
+                  <Sparkles size={16} />
+                  <span>
+                    Your draft contains {builderData.photos.length} photos. The {activePlanConfig.name} will display the top {activePlanConfig.maxPhotos} photos. You can reorder them or upgrade to Premium/Deluxe to show all 8 photos.
+                  </span>
+                </div>
+              )}
 
               <ImageUploader
-                giftId={draftId}
-                initialPhotos={photos}
-                onChange={setPhotos}
-                onOpenPreview={() => setShowWallModal(true)}
+                giftId={builderData.draftId}
+                initialPhotos={builderData.photos}
+                maxPhotos={activePlanConfig.maxPhotos}
+                allowCaptions={activePlanConfig.captions}
+                allowDates={activePlanConfig.captions}
+                onChange={(updatedPhotos) => updateBuilderData({ photos: updatedPhotos })}
               />
 
-              <div className="step-actions">
-                <Button
-                  variant="secondary"
-                  size="md"
-                  onClick={() => setCurrentStep(1)}
-                  icon={<ArrowLeft size={16} />}
-                >
-                  Back
-                </Button>
-                <Button
-                  variant="primary"
-                  size="md"
-                  onClick={handleStep2Next}
-                  disabled={loading}
-                  icon={<ArrowRight size={16} />}
-                  iconPosition="right"
-                >
-                  {loading ? 'Saving Memories...' : 'Continue to Letter'}
-                </Button>
-              </div>
+              <CreatorNavigation
+                onBack={previousStep}
+                onNext={handlePhotosStepNext}
+                nextText="Continue to Letter"
+                loading={uiState.loading}
+              />
             </div>
           )}
 
           {/* ============================================================ */}
-          {/* STEP 3: MESSAGE */}
+          {/* STEP 4: RAKHI LETTER (MESSAGE) */}
           {/* ============================================================ */}
-          {currentStep === 3 && (
+          {currentStepId === STEP_IDS.MESSAGE && (
             <div className="creator-step-card paper-card animate-fade-in">
+              <div className="step-badge-pill">
+                <Feather size={13} />
+                <span>Step 4 of 7 • Sacred Rakhi Letter</span>
+              </div>
+
               <h3 className="card-title">Write Your Heartfelt Rakhi Letter</h3>
               <p className="card-subtitle">
-                An intimate editorial letter that opens with a sacred wax seal in the gift.
+                An intimate editorial letter that opens with an interactive wax seal on your sister's gift page.
               </p>
 
-              <div className="form-group">
-                <label className="form-label">
-                  Message for {recipientNickname || recipientName} ({message.length}/1200 characters)
-                </label>
-                <textarea
-                  className="form-textarea"
-                  rows={6}
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  maxLength={1200}
-                  placeholder="Write your genuine emotions, gratitude, and inside memories here..."
-                />
-              </div>
-
-              <div className="step-actions">
-                <Button
-                  variant="secondary"
-                  size="md"
-                  onClick={() => setCurrentStep(2)}
-                  icon={<ArrowLeft size={16} />}
-                >
-                  Back
-                </Button>
-                <Button
-                  variant="primary"
-                  size="md"
-                  onClick={async () => {
-                    await saveDraft();
-                    setCurrentStep(4);
-                  }}
-                  disabled={loading}
-                  icon={<ArrowRight size={16} />}
-                  iconPosition="right"
-                >
-                  Continue to Reasons
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {/* ============================================================ */}
-          {/* STEP 4: REASONS & SURPRISE */}
-          {/* ============================================================ */}
-          {currentStep === 4 && (
-            <div className="creator-step-card paper-card animate-fade-in">
-              <div className="reasons-step-header">
-                <div>
-                  <h3 className="card-title">Why You're Special (3–5 Items)</h3>
-                  <p className="card-subtitle">
-                    Little reminders of why your sibling bond is unbreakable.
-                  </p>
+              {/* Inspiration Prompt Chips */}
+              <div className="letter-prompts-section">
+                <span className="prompts-label">✨ Click an idea to add inspiration:</span>
+                <div className="prompt-chips-wrapper">
+                  {[
+                    "Thank you for always having my back no matter what.",
+                    "From fighting over the TV remote to celebrating every big milestone together...",
+                    "No matter how far apart we are, our bond remains unbreakable.",
+                    "Wishing you all the joy, health, and laughter in the world this Raksha Bandhan."
+                  ].map((prompt, pIdx) => (
+                    <button
+                      key={pIdx}
+                      type="button"
+                      className="prompt-chip"
+                      onClick={() => {
+                        const current = builderData.message.trim();
+                        const updated = current ? `${current}\n\n${prompt}` : prompt;
+                        if (updated.length <= 1200) {
+                          updateBuilderData({ message: updated });
+                        }
+                      }}
+                    >
+                      "{prompt.slice(0, 42)}..."
+                    </button>
+                  ))}
                 </div>
-                {reasons.length < 5 && (
-                  <button
-                    type="button"
-                    className="btn btn-secondary btn-sm"
-                    onClick={handleAddReason}
-                  >
-                    <Plus size={14} />
-                    <span>Add Item</span>
-                  </button>
-                )}
               </div>
 
-              <div className="reasons-edit-list">
-                {reasons.map((r, idx) => (
-                  <div key={idx} className="reason-edit-card">
-                    <span className="reason-num-badge">{r.number || `0${idx + 1}`}</span>
-                    <div className="reason-fields">
-                      <input
-                        type="text"
-                        className="form-input"
-                        placeholder="Title (e.g. Always Having My Back)"
-                        value={r.title}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setReasons((prev) =>
-                            prev.map((item, i) => (i === idx ? { ...item, title: val } : item))
-                          );
-                        }}
-                      />
-                      <input
-                        type="text"
-                        className="form-input"
-                        placeholder="Description..."
-                        value={r.text}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setReasons((prev) =>
-                            prev.map((item, i) => (i === idx ? { ...item, text: val } : item))
-                          );
-                        }}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Surprise Reveal Section */}
-              <div className="surprise-edit-box">
-                <h4 className="surprise-box-title">🎁 Sealed Surprise Promise</h4>
-                <div className="form-group">
-                  <label className="form-label">Surprise Voucher / Secret Promise</label>
-                  <input
-                    type="text"
-                    className="form-input"
-                    value={surprise.voucher}
-                    onChange={(e) => setSurprise({ ...surprise, voucher: e.target.value })}
-                    placeholder="e.g. CONCERT PASS & DINNER — NOV 2026"
+              <div className="form-group letter-textarea-group">
+                <label className="form-label">
+                  <span>Message for {builderData.recipientNickname || builderData.recipientName || 'Sister'}</span>
+                  <span className={`char-counter-pill ${builderData.message.length > 1100 ? 'warning' : ''}`}>
+                    {builderData.message.length} / 1200 chars
+                  </span>
+                </label>
+                <div className="textarea-wrapper">
+                  <textarea
+                    className="form-textarea letter-textarea"
+                    rows={7}
+                    value={builderData.message}
+                    onChange={(e) => updateBuilderData({ message: e.target.value })}
+                    maxLength={1200}
+                    placeholder="Write what you want her to know — your favorite memories together, heartfelt gratitude, or a warm Rakhi blessing..."
                   />
                 </div>
               </div>
 
-              <div className="step-actions">
-                <Button
-                  variant="secondary"
-                  size="md"
-                  onClick={() => setCurrentStep(3)}
-                  icon={<ArrowLeft size={16} />}
-                >
-                  Back
-                </Button>
-                <Button
-                  variant="primary"
-                  size="md"
-                  onClick={async () => {
-                    await saveDraft();
-                    setCurrentStep(5);
-                  }}
-                  disabled={loading}
-                  icon={<ArrowRight size={16} />}
-                  iconPosition="right"
-                >
-                  Continue to Theme
-                </Button>
-              </div>
+              <CreatorNavigation
+                onBack={previousStep}
+                onNext={handleNextWithSave}
+                nextText={activePlanConfig.reasons ? "Continue to Personalize" : "Continue to Theme"}
+                loading={uiState.loading}
+              />
             </div>
           )}
 
           {/* ============================================================ */}
-          {/* STEP 5: THEME SELECTION */}
+          {/* STEP 5: PERSONALIZE (Reasons, Timeline, Sibling Fun - Gated) */}
           {/* ============================================================ */}
-          {currentStep === 5 && (
+          {currentStepId === STEP_IDS.PERSONALIZE && activePlanConfig.reasons && (
             <div className="creator-step-card paper-card animate-fade-in">
-              <h3 className="card-title">Choose Visual Keepsake Theme</h3>
+              <div className="step-badge-pill">
+                <Sparkles size={13} />
+                <span>Step 5 of 7 • Package Enhancements</span>
+              </div>
+
+              <PersonalizeTabContainer
+                reasons={builderData.reasons}
+                memories={builderData.memories}
+                funItems={builderData.funItems}
+                availablePhotos={builderData.photos}
+                recipientName={builderData.recipientNickname || builderData.recipientName || 'Sister'}
+                planKey={builderData.plan}
+                onUpdateReasons={(newReasons) => updateBuilderData({ reasons: newReasons })}
+                onUpdateMemories={(newMemories) => updateBuilderData({ memories: newMemories })}
+                onUpdateFunItems={(newFunItems) => updateBuilderData({ funItems: newFunItems })}
+              />
+
+              <CreatorNavigation
+                onBack={previousStep}
+                onNext={handleNextWithSave}
+                nextText="Continue to Theme"
+                loading={uiState.loading}
+              />
+            </div>
+          )}
+
+          {/* ============================================================ */}
+          {/* STEP 6: THEME + SURPRISE PROMISE */}
+          {/* ============================================================ */}
+          {currentStepId === STEP_IDS.THEME && (
+            <div className="creator-step-card paper-card animate-fade-in">
+              <div className="step-badge-pill">
+                <Sparkles size={13} />
+                <span>Step 6 of 7 • Visual Aesthetics & Secret Reveal</span>
+              </div>
+
+              <h3 className="card-title">Choose Visual Theme & Surprise Promise</h3>
               <p className="card-subtitle">
-                Select the mood and color palette that matches your sibling's aesthetic.
+                Select the mood and color palette that matches your sister's aesthetic.
               </p>
 
               <div className="themes-grid">
                 {themes.map((theme) => {
-                  const isSelected = selectedTheme === theme.id;
+                  const isAllowed = isThemeAllowedForPlan(theme.id, builderData.plan);
+                  const isSelected = builderData.theme === theme.id;
+
                   return (
                     <div
                       key={theme.id}
-                      className={`theme-card ${isSelected ? 'selected' : ''}`}
-                      onClick={() => setSelectedTheme(theme.id)}
+                      className={`theme-card ${isSelected ? 'selected' : ''} ${!isAllowed ? 'disabled' : ''}`}
+                      onClick={() => {
+                        if (isAllowed) {
+                          updateBuilderData({ theme: theme.id });
+                        }
+                      }}
                     >
                       <div className="theme-header">
-                        <h4 className="theme-name">{theme.name}</h4>
+                        <h4
+                          className="theme-name"
+                          style={{ fontFamily: theme.fontFamilyHeading || 'inherit' }}
+                        >
+                          {theme.name}
+                        </h4>
                         {isSelected && <CheckCircle size={18} className="theme-check-icon" />}
                       </div>
                       <span className="theme-badge">{theme.badge}</span>
                       <p className="theme-desc">{theme.description}</p>
 
-                      {/* Palette Color Swatches */}
-                      <div className="theme-swatches">
-                        <span className="swatch" style={{ background: theme.palette.bgPrimary }} />
-                        <span className="swatch" style={{ background: theme.palette.accent }} />
-                        <span className="swatch" style={{ background: theme.palette.gold }} />
-                        <span className="swatch" style={{ background: theme.palette.textPrimary }} />
+                      {/* Mini Visual Preview Pill */}
+                      <div
+                        className="theme-mini-visual"
+                        style={{
+                          background: theme.palette.bgSurface,
+                          borderColor: theme.palette.gold || theme.palette.accent
+                        }}
+                      >
+                        <div
+                          className="mini-thread-line"
+                          style={{ background: theme.wall?.threadColor || theme.palette.accent }}
+                        />
+                        <span
+                          className="mini-sample-text"
+                          style={{
+                            fontFamily: theme.fontFamilyHeading,
+                            color: theme.palette.accent
+                          }}
+                        >
+                          Aa Bb Cc • Sample
+                        </span>
                       </div>
+
+                      <div className="theme-swatches">
+                        <span className="swatch" title="Background" style={{ background: theme.palette.bgPrimary }} />
+                        <span className="swatch" title="Surface" style={{ background: theme.palette.bgSurface }} />
+                        <span className="swatch" title="Accent" style={{ background: theme.palette.accent }} />
+                        <span className="swatch" title="Gold" style={{ background: theme.palette.gold }} />
+                        <span className="swatch" title="Text" style={{ background: theme.palette.textPrimary }} />
+                      </div>
+
+                      {!isAllowed && (
+                        <div className="theme-tier-lock">Requires Premium Package</div>
+                      )}
                     </div>
                   );
                 })}
               </div>
 
-              <div className="step-actions">
-                <Button
-                  variant="secondary"
-                  size="md"
-                  onClick={() => setCurrentStep(4)}
-                  icon={<ArrowLeft size={16} />}
-                >
-                  Back
-                </Button>
-                <Button
-                  variant="primary"
-                  size="md"
-                  onClick={async () => {
-                    await saveDraft();
-                    trackEvent('preview_viewed', { theme: selectedTheme });
-                    setCurrentStep(6);
-                  }}
-                  disabled={loading}
-                  icon={<ArrowRight size={16} />}
-                  iconPosition="right"
-                >
-                  See Live 3D Preview
-                </Button>
+              {/* Sealed Surprise Promise Input */}
+              <div className="surprise-edit-box">
+                <div className="surprise-header-row">
+                  <Gift size={20} className="surprise-header-icon" />
+                  <div>
+                    <h4 className="surprise-box-title">Sealed Surprise Promise / Gift Voucher</h4>
+                    <p className="surprise-box-sub">
+                      Hidden inside a scratchable wax envelope at the end of the gift page.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="form-group" style={{ marginTop: '0.75rem' }}>
+                  <label className="form-label">
+                    <span>Secret Promise or Gift Voucher Code</span>
+                    <span className="optional-pill">Optional</span>
+                  </label>
+                  <div className="input-wrapper">
+                    <Gift size={18} className="input-leading-icon icon-gold" />
+                    <input
+                      type="text"
+                      className="form-input has-leading-icon"
+                      value={builderData.surprise.voucher}
+                      onChange={(e) =>
+                        updateBuilderData({
+                          surprise: { ...builderData.surprise, voucher: e.target.value }
+                        })
+                      }
+                      placeholder="e.g. 1000 Amazon Voucher / Weekend Trip to Hills / Dinner at your favorite cafe"
+                    />
+                  </div>
+                  <span className="input-helper-text">
+                    This will remain completely confidential until she clicks to reveal the wax seal!
+                  </span>
+                </div>
               </div>
+
+              <CreatorNavigation
+                onBack={previousStep}
+                onNext={async () => {
+                  await saveDraftCheckpoint();
+                  trackEvent('preview_viewed', { theme: builderData.theme });
+                  nextStep();
+                }}
+                nextText="See Live Preview"
+                loading={uiState.loading}
+              />
             </div>
           )}
 
           {/* ============================================================ */}
-          {/* STEP 6: LIVE PREVIEW */}
+          {/* STEP 7: LIVE RECIPIENT PREVIEW */}
           {/* ============================================================ */}
-          {currentStep === 6 && (
+          {currentStepId === STEP_IDS.PREVIEW && (
             <div className="preview-mode-wrapper animate-fade-in">
-              <div className="preview-banner">
-                <Sparkles size={16} color="var(--color-gold)" />
-                <span>
-                  Live Preview: This is exactly what {recipientName} will experience when opening your gift!
-                </span>
-              </div>
+              {/* Compact Preview Action Toolbar */}
+              <PreviewToolbar
+                builderData={builderData}
+                onUpdateTheme={(newTheme) => updateBuilderData({ theme: newTheme })}
+                onJumpToStep={goToStep}
+                onChangePackage={handlePackageChangeRequest}
+              />
 
-              {/* True 3D Memory Wall with Real Entered Data */}
-              <div className="preview-wall-box">
-                <MemoryWall gift={previewGiftData} />
+              {/* Exact Live Recipient Storytelling View with Live Theme Skinning */}
+              <div
+                className="preview-wall-box"
+                data-theme={validateTheme(builderData.theme)}
+                style={getThemeCssVariables(builderData.theme)}
+              >
+                <GiftHero gift={previewGiftData} plan={builderData.plan} />
+                <MemoryWall gift={previewGiftData} plan={builderData.plan} theme={validateTheme(builderData.theme)} />
+                <RakhiMessage gift={previewGiftData} plan={builderData.plan} />
+                {activePlanConfig.reasons && previewGiftData.reasons.length > 0 && (
+                  <WhySpecial gift={previewGiftData} plan={builderData.plan} />
+                )}
+                {activePlanConfig.timeline && previewGiftData.memories.length > 0 && (
+                  <MemoryTimeline gift={previewGiftData} plan={builderData.plan} />
+                )}
+                {activePlanConfig.siblingFun && previewGiftData.funItems.length > 0 && (
+                  <SiblingFun gift={previewGiftData} plan={builderData.plan} />
+                )}
+                <SurpriseReveal gift={previewGiftData} plan={builderData.plan} />
+                <FinalWish gift={previewGiftData} plan={builderData.plan} />
+                <KeepsakeShare gift={previewGiftData} plan={builderData.plan} />
               </div>
 
               <div className="step-actions preview-actions">
                 <Button
                   variant="secondary"
                   size="md"
-                  onClick={() => setCurrentStep(5)}
+                  onClick={previousStep}
                   icon={<ArrowLeft size={16} />}
                 >
-                  Back to Themes
+                  Back to Theme
                 </Button>
                 <Button
                   variant="gold"
                   size="lg"
-                  onClick={() => setCurrentStep(7)}
+                  onClick={() => goToStep(STEP_IDS.PAYMENT)}
                   icon={<ArrowRight size={18} />}
                   iconPosition="right"
                 >
-                  Proceed to Activate Gift
+                  Proceed to Activate Gift ({activePlanConfig.formattedPrice})
                 </Button>
               </div>
             </div>
           )}
 
           {/* ============================================================ */}
-          {/* STEP 7: PAYMENT & ACTIVATION */}
+          {/* STEP 8: PAYMENT & ACTIVATION (System State) */}
           {/* ============================================================ */}
-          {currentStep === 7 && (
+          {currentStepId === STEP_IDS.PAYMENT && (
             <div className="creator-step-card paper-card animate-fade-in">
-              <h3 className="card-title">Select Keepsake Package & Activate</h3>
+              <h3 className="card-title">Activate Keepsake — {activePlanConfig.name}</h3>
               <p className="card-subtitle">
-                One-time payment with lifetime permanent link hosting for {recipientName}.
+                One-time secure payment of {activePlanConfig.formattedPrice} with permanent private link hosting for {builderData.recipientName}.
               </p>
 
-              <div className="plan-selection-grid">
-                {pricingTiers.map((tier) => (
-                  <div
-                    key={tier.id}
-                    className={`plan-card ${selectedPlan === tier.id.toUpperCase() ? 'active-plan' : ''}`}
-                    onClick={() => setSelectedPlan(tier.id.toUpperCase())}
-                  >
-                    {tier.popular && <span className="plan-tag">Recommended</span>}
-                    <h4 className="plan-title">{tier.name}</h4>
-                    <div className="plan-price">{tier.price}</div>
-                    <p className="plan-desc">{tier.tagline}</p>
-                  </div>
-                ))}
+              <div className="payment-summary-box">
+                <div className="summary-row">
+                  <span>Selected Package:</span>
+                  <strong>{activePlanConfig.name}</strong>
+                </div>
+                <div className="summary-row">
+                  <span>Mounted Memory Photos:</span>
+                  <span>{activePhotos.length} Photos</span>
+                </div>
+                <div className="summary-row total-row">
+                  <span>Total Amount:</span>
+                  <span className="total-price">{activePlanConfig.formattedPrice}</span>
+                </div>
               </div>
 
               <div className="payment-security-notice">
@@ -984,10 +946,10 @@ export const CreatorPage = () => {
                 </span>
               </div>
 
-              {loading && (
-                <div style={{ margin: 'var(--space-4) 0', padding: 'var(--space-3)', background: 'rgba(212, 175, 55, 0.08)', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-gold)', display: 'flex', alignItems: 'center', gap: 'var(--space-3)', color: 'var(--color-gold-dark)', fontSize: '0.9rem' }}>
+              {uiState.loading && (
+                <div className="payment-loading-box">
                   <Sparkles size={18} />
-                  <span>Payment received. We're confirming your payment and preparing your gift...</span>
+                  <span>Processing payment & confirming with bank...</span>
                 </div>
               )}
 
@@ -995,7 +957,7 @@ export const CreatorPage = () => {
                 <Button
                   variant="secondary"
                   size="md"
-                  onClick={() => setCurrentStep(6)}
+                  onClick={() => goToStep(STEP_IDS.PREVIEW)}
                   icon={<ArrowLeft size={16} />}
                 >
                   Back to Preview
@@ -1004,19 +966,19 @@ export const CreatorPage = () => {
                   variant="primary"
                   size="lg"
                   onClick={handleInitiatePayment}
-                  disabled={loading}
+                  disabled={uiState.loading}
                   icon={<Sparkles size={18} />}
                 >
-                  {loading ? 'Confirming Payment...' : `Pay & Activate (${selectedPlan === 'BASIC' ? '₹99' : selectedPlan === 'DELUXE' ? '₹449' : '₹249'})`}
+                  {uiState.loading ? 'Confirming Payment...' : `Pay ${activePlanConfig.formattedPrice} & Activate`}
                 </Button>
               </div>
             </div>
           )}
 
           {/* ============================================================ */}
-          {/* STEP 8: COMPLETION / ACTIVATION SUCCESS */}
+          {/* STEP 9: SUCCESS / GIFT ACTIVATED (System State) */}
           {/* ============================================================ */}
-          {currentStep === 8 && (
+          {currentStepId === STEP_IDS.SUCCESS && (
             <div className="completion-card paper-card animate-fade-in-up">
               <div className="completion-emblem">
                 <Heart size={28} className="completion-heart" />
@@ -1024,28 +986,26 @@ export const CreatorPage = () => {
 
               <h2 className="completion-title">Your Rakhi Gift is Ready! ❤️</h2>
               <p className="completion-subtitle">
-                The memory keepsake for <strong>{recipientName}</strong> is live and permanently hosted.
+                The memory keepsake for <strong>{builderData.recipientName}</strong> is live and permanently hosted.
               </p>
 
-              {/* Payment Verification Receipt */}
-              {paymentReceipt && (
-                <div style={{ margin: 'var(--space-4) 0', padding: 'var(--space-3) var(--space-4)', background: 'rgba(28, 25, 23, 0.03)', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', fontSize: '0.85rem', textAlign: 'left', color: 'var(--color-text-secondary)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                    <span><strong>Package:</strong> {paymentReceipt.plan} Keepsake</span>
-                    <span style={{ color: '#15803d', fontWeight: 600 }}>✓ Verified Paid (₹{paymentReceipt.amount})</span>
+              {uiState.paymentReceipt && (
+                <div className="receipt-box">
+                  <div className="receipt-row">
+                    <span><strong>Package:</strong> {uiState.paymentReceipt.plan} Keepsake</span>
+                    <span className="receipt-status">✓ Verified Paid (₹{uiState.paymentReceipt.amount})</span>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', opacity: 0.8 }}>
-                    <span><strong>Order Ref:</strong> {paymentReceipt.orderId}</span>
-                    <span>{new Date(paymentReceipt.paidAt).toLocaleDateString()}</span>
+                  <div className="receipt-row-sub">
+                    <span>Order Ref: {uiState.paymentReceipt.orderId}</span>
+                    <span>{new Date(uiState.paymentReceipt.paidAt).toLocaleDateString()}</span>
                   </div>
                 </div>
               )}
 
-              {/* Public Gift Link Box */}
-              {giftSlug && (
+              {builderData.giftSlug && (
                 <div className="gift-link-box">
                   <span className="link-text">
-                    {window.location.origin}/g/{giftSlug}
+                    {window.location.origin}/g/{builderData.giftSlug}
                   </span>
                   <button
                     type="button"
@@ -1053,17 +1013,16 @@ export const CreatorPage = () => {
                     onClick={handleCopyLink}
                   >
                     <Copy size={14} />
-                    <span>{copiedLink ? 'Copied!' : 'Copy Link'}</span>
+                    <span>{uiState.copiedLink ? 'Copied!' : 'Copy Link'}</span>
                   </button>
                 </div>
               )}
 
-              {/* Scannable QR Code Card */}
-              {qrCodeDataUrl && giftSlug && (
+              {uiState.qrCodeDataUrl && builderData.giftSlug && (
                 <div className="qr-container">
                   <h4 className="qr-title">Printable QR Code Card</h4>
                   <div className="qr-image-wrapper">
-                    <img src={qrCodeDataUrl} alt="Gift QR Code" className="qr-image" />
+                    <img src={uiState.qrCodeDataUrl} alt="Gift QR Code" className="qr-image" />
                   </div>
                   <p className="qr-hint">
                     Scan with any camera or attach to your physical Rakhi gift hamper!
@@ -1071,378 +1030,384 @@ export const CreatorPage = () => {
                 </div>
               )}
 
-              {/* Action Buttons */}
-              {giftSlug && (
-                <div className="completion-actions btn-group-mobile-stack">
-                  <a
-                    href={`https://wa.me/?text=${encodeURIComponent(
-                      `I made something special for you this Raksha Bandhan ❤️ Open your gift: ${window.location.origin}/g/${giftSlug}`
-                    )}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="btn btn-gold btn-lg"
-                    onClick={() => trackEvent('whatsapp_share_clicked', { slug: giftSlug })}
-                  >
-                    <Share2 size={18} />
-                    <span>Share on WhatsApp</span>
-                  </a>
+              <div className="completion-actions">
+                <Button
+                  href={`/g/${builderData.giftSlug}`}
+                  target="_blank"
+                  variant="gold"
+                  size="md"
+                  icon={<ExternalLink size={16} />}
+                >
+                  View Active Gift Site
+                </Button>
 
-                  <Button
-                    href={`/g/${giftSlug}`}
-                    variant="secondary"
-                    size="lg"
-                    target="_blank"
-                    icon={<ExternalLink size={18} />}
-                    iconPosition="right"
-                  >
-                    Open Gift Experience
-                  </Button>
-                </div>
-              )}
+                <Button
+                  href={`https://api.whatsapp.com/send?text=${encodeURIComponent(
+                    `Dearest ${builderData.recipientName}, I created a special digital Rakhi gift for you! Open it here: ${window.location.origin}/g/${builderData.giftSlug}`
+                  )}`}
+                  target="_blank"
+                  variant="secondary"
+                  size="md"
+                  icon={<Share2 size={16} />}
+                >
+                  Share on WhatsApp
+                </Button>
+              </div>
             </div>
           )}
         </div>
       </main>
-
-      {/* Quick Memory Wall Preview Modal */}
-      {showWallModal && (
-        <div
-          className="wall-preview-modal-backdrop"
-          onClick={() => setShowWallModal(false)}
-          role="dialog"
-          aria-modal="true"
-        >
-          <div
-            className="wall-preview-modal-card paper-card"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="preview-modal-header">
-              <div className="preview-title-wrap">
-                <Sparkles size={18} color="var(--color-gold)" />
-                <h3>Live Memory Wall Preview</h3>
-              </div>
-              <button
-                type="button"
-                className="preview-close-btn"
-                onClick={() => setShowWallModal(false)}
-                aria-label="Close preview"
-              >
-                ✕
-              </button>
-            </div>
-            <div className="preview-modal-body">
-              <MemoryWall gift={previewGiftData} mode="preview" />
-            </div>
-          </div>
-        </div>
-      )}
 
       <Footer />
 
       <style>{`
         .creator-page-root {
           min-height: 100vh;
-          background-color: var(--bg-primary);
-          display: flex;
-          flex-direction: column;
+          background-color: var(--bg-primary, #FAF7F2);
+          color: var(--text-primary, #1E1B18);
         }
 
         .creator-main-container {
-          flex-grow: 1;
-          padding-top: calc(var(--header-height) + 1.5rem);
-          padding-bottom: var(--space-16);
-        }
-
-        .creator-stepper-header {
-          background: #FAF5ED;
-          border-bottom: 1px solid var(--border-light);
-          padding: var(--space-4) 0;
-          margin-bottom: var(--space-8);
-        }
-
-        .stepper-inner {
-          display: flex;
-          flex-direction: column;
-          gap: var(--space-3);
-        }
-
-        .stepper-meta {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          flex-wrap: wrap;
-          gap: var(--space-2);
-        }
-
-        .step-pill {
-          font-size: var(--text-xs);
-          font-weight: 700;
-          color: var(--color-rakhi-red);
-          background: var(--color-rakhi-light);
-          padding: 3px 12px;
-          border-radius: var(--radius-full);
-        }
-
-        .step-heading {
-          font-size: 1.35rem;
-          color: var(--text-primary);
-          margin: 0;
-        }
-
-        .stepper-track {
-          width: 100%;
-          height: 5px;
-          background: #EADBCE;
-          border-radius: var(--radius-full);
-          overflow: hidden;
-        }
-
-        .stepper-progress-bar {
-          height: 100%;
-          background: linear-gradient(90deg, var(--color-rakhi-red), var(--color-gold));
-          transition: width 0.3s ease;
+          padding-top: var(--header-height, 60px);
+          padding-bottom: 4rem;
         }
 
         .creator-content-container {
           max-width: 840px;
+          margin: 1.5rem auto 0 auto;
         }
 
         .creator-step-card {
-          padding: clamp(1.75rem, 4vw, 3rem);
-          box-shadow: var(--shadow-md);
+          padding: clamp(1.5rem, 4vw, 2.75rem);
+          border-radius: 20px;
+          background: #FFFDF9;
+          border: 1.5px solid #EFE6D8;
+          box-shadow: 
+            0 20px 48px -12px rgba(45, 30, 15, 0.08),
+            0 4px 12px -2px rgba(45, 30, 15, 0.03);
+          position: relative;
+        }
+
+        .step-badge-pill {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          font-size: 0.75rem;
+          font-weight: 700;
+          color: #9B2226;
+          background: #FBF0EF;
+          border: 1px solid rgba(155, 34, 38, 0.15);
+          padding: 4px 12px;
+          border-radius: 9999px;
+          text-transform: uppercase;
+          letter-spacing: 0.06em;
+          margin-bottom: 0.85rem;
         }
 
         .card-title {
-          font-size: 1.6rem;
-          color: var(--text-primary);
-          margin-bottom: var(--space-1);
+          font-family: var(--font-serif, 'Playfair Display', Georgia, serif);
+          font-size: clamp(1.5rem, 3vw, 2rem);
+          font-weight: 700;
+          color: #1E1B18;
+          line-height: 1.25;
+          letter-spacing: -0.015em;
+          margin: 0 0 0.4rem 0;
         }
 
         .card-subtitle {
-          font-size: var(--text-sm);
-          color: var(--text-secondary);
-          margin-bottom: var(--space-6);
+          font-family: var(--font-sans, 'Plus Jakarta Sans', sans-serif);
+          font-size: 0.9375rem;
+          color: #59524C;
+          line-height: 1.6;
+          margin: 0 0 1.5rem 0;
         }
 
+        .creator-error-banner {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          background: #FEE2E2;
+          border: 1px solid #FCA5A5;
+          color: #991B1B;
+          padding: 10px 14px;
+          border-radius: var(--radius-md, 8px);
+          font-size: 0.85rem;
+          margin-bottom: 1rem;
+          font-weight: 500;
+        }
+
+        .info-notice-box {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          background: rgba(198, 146, 52, 0.1);
+          border: 1px solid rgba(198, 146, 52, 0.3);
+          color: #7A5813;
+          padding: 10px 14px;
+          border-radius: var(--radius-md, 8px);
+          font-size: 0.825rem;
+          margin-bottom: 1rem;
+        }
+
+        /* --- UI/UX Pro Max Form Layout --- */
         .form-grid {
           display: grid;
-          grid-template-columns: repeat(2, 1fr);
-          gap: var(--space-5);
-          margin-bottom: var(--space-8);
+          grid-template-columns: 1fr 1fr;
+          gap: 1.35rem 1.25rem;
+          margin-top: 1.25rem;
         }
 
         .form-group {
           display: flex;
           flex-direction: column;
-          gap: var(--space-2);
+          gap: 6px;
+          position: relative;
+        }
+
+        .form-group.full-width {
+          grid-column: span 2;
         }
 
         .form-label {
-          font-size: var(--text-xs);
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          font-family: var(--font-sans, 'Plus Jakarta Sans', sans-serif);
+          font-size: 0.8125rem;
           font-weight: 700;
-          color: var(--text-primary);
-          letter-spacing: 0.02em;
+          color: #2D2721;
+          letter-spacing: 0.01em;
+          margin-bottom: 2px;
         }
 
-        .form-input,
-        .form-textarea {
-          width: 100%;
-          padding: 0.75rem 1rem;
-          font-size: var(--text-sm);
-          font-family: inherit;
-          color: var(--text-primary);
-          background: #FFFFFF;
-          border: 1px solid var(--border-default);
-          border-radius: var(--radius-md);
-          outline: none;
-          transition: border-color 0.2s, box-shadow 0.2s;
-        }
-
-        .form-input:focus,
-        .form-textarea:focus {
-          border-color: var(--color-gold);
-          box-shadow: 0 0 0 3px var(--color-gold-glow);
-        }
-
-        .radio-pill-group {
-          display: flex;
-          gap: var(--space-3);
-        }
-
-        .radio-pill {
-          flex: 1;
-          padding: 0.75rem;
-          border: 1px solid var(--border-default);
-          border-radius: var(--radius-md);
-          background: #FFFFFF;
-          font-size: var(--text-sm);
-          font-weight: 600;
-          color: var(--text-secondary);
-          transition: all 0.2s;
-        }
-
-        .radio-pill.active {
-          border-color: var(--color-rakhi-red);
-          background: var(--color-rakhi-light);
-          color: var(--color-rakhi-red);
-        }
-
-        .step-actions {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          padding-top: var(--space-6);
-          border-top: 1px solid var(--border-light);
-        }
-
-        /* Photos Grid */
-        .photos-header {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          margin-bottom: var(--space-6);
-          flex-wrap: wrap;
-          gap: var(--space-3);
-        }
-
-        .photos-grid {
-          display: grid;
-          grid-template-columns: repeat(3, 1fr);
-          gap: var(--space-4);
-          margin-bottom: var(--space-8);
-        }
-
-        .photo-thumb-card {
+        .input-wrapper {
           position: relative;
-          background: #FFFFFF;
-          border: 1px solid var(--border-default);
-          border-radius: var(--radius-md);
-          padding: var(--space-2);
-          box-shadow: var(--shadow-xs);
-        }
-
-        .thumb-img {
+          display: flex;
+          align-items: center;
           width: 100%;
-          height: 120px;
-          object-fit: cover;
-          border-radius: var(--radius-sm);
-          margin-bottom: var(--space-2);
         }
 
-        .thumb-delete-btn {
+        .input-leading-icon {
           position: absolute;
-          top: 12px;
-          right: 12px;
-          background: rgba(28, 25, 23, 0.75);
-          color: #FFFFFF;
-          width: 26px;
-          height: 26px;
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          transition: background 0.2s;
+          left: 14px;
+          top: 50%;
+          transform: translateY(-50%);
+          color: #8C827A;
+          pointer-events: none;
+          transition: color 0.2s ease, transform 0.2s ease;
+          z-index: 2;
         }
 
-        .thumb-delete-btn:hover {
-          background: var(--color-rakhi-red);
-        }
-
-        .thumb-caption-input {
+        .form-input {
           width: 100%;
-          font-size: var(--text-xs);
-          padding: 4px 6px;
-          border: 1px solid transparent;
-          border-radius: var(--radius-sm);
+          font-family: var(--font-sans, 'Plus Jakarta Sans', sans-serif);
+          font-size: 0.9375rem;
+          font-weight: 500;
+          color: #1E1B18;
+          background-color: #FAF7F2;
+          border: 1.5px solid #E5D9C8;
+          border-radius: 12px;
+          padding: 0.75rem 1rem;
+          transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+          outline: none;
+          box-sizing: border-box;
         }
 
-        .thumb-caption-input:focus {
-          border-color: var(--border-default);
-          background: #FAF7F2;
+        .form-input.has-leading-icon {
+          padding-left: 42px;
         }
 
-        /* Reasons List */
-        .reasons-step-header {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          margin-bottom: var(--space-5);
+        .form-input:hover {
+          border-color: #C69234;
+          background-color: #FFFDF9;
         }
 
-        .reasons-edit-list {
-          display: flex;
-          flex-direction: column;
-          gap: var(--space-3);
-          margin-bottom: var(--space-6);
+        .form-input:focus {
+          background-color: #FFFFFF;
+          border-color: #9B2226;
+          box-shadow: 0 0 0 3.5px rgba(155, 34, 38, 0.12), 0 2px 8px rgba(155, 34, 38, 0.06);
         }
 
-        .reason-edit-card {
-          display: flex;
-          align-items: center;
-          gap: var(--space-3);
-          background: #FFFFFF;
-          padding: var(--space-3);
-          border: 1px solid var(--border-default);
-          border-radius: var(--radius-md);
+        .form-input::placeholder {
+          color: #A89F91;
+          font-weight: 400;
         }
 
-        .reason-num-badge {
-          font-family: var(--font-serif);
-          font-size: var(--text-sm);
+        .input-wrapper:focus-within .input-leading-icon {
+          color: #9B2226;
+          transform: translateY(-50%) scale(1.08);
+        }
+
+        .input-wrapper:focus-within .input-leading-icon.icon-pink {
+          color: #BE185D;
+        }
+
+        .input-wrapper:focus-within .input-leading-icon.icon-gold {
+          color: #C69234;
+        }
+
+        .input-helper-text {
+          font-size: 0.75rem;
+          color: #7A7268;
+          margin-top: 3px;
+          line-height: 1.4;
+        }
+
+        .optional-pill {
+          font-size: 0.7rem;
+          font-weight: 600;
+          color: #8C827A;
+          background: #EFE6D8;
+          padding: 2px 8px;
+          border-radius: 9999px;
+          text-transform: uppercase;
+          letter-spacing: 0.04em;
+        }
+
+        .required-star {
+          color: #9B2226;
           font-weight: 700;
-          color: var(--color-rakhi-red);
-          background: var(--color-rakhi-light);
-          padding: 6px 10px;
-          border-radius: var(--radius-sm);
+          margin-left: 2px;
         }
 
-        .reason-fields {
+        /* --- Letter Prompts & Textarea --- */
+        .letter-prompts-section {
+          background: #FDF9F3;
+          border: 1px dashed #E5D9C8;
+          border-radius: 12px;
+          padding: 12px 14px;
+          margin-bottom: 1.25rem;
+        }
+
+        .prompts-label {
+          display: block;
+          font-size: 0.75rem;
+          font-weight: 700;
+          color: #7A5813;
+          margin-bottom: 8px;
+          text-transform: uppercase;
+          letter-spacing: 0.04em;
+        }
+
+        .prompt-chips-wrapper {
           display: flex;
-          flex-direction: column;
-          gap: 6px;
-          flex-grow: 1;
+          flex-wrap: wrap;
+          gap: 8px;
         }
 
+        .prompt-chip {
+          background: #FFFFFF;
+          border: 1px solid #E5D9C8;
+          color: #59524C;
+          font-size: 0.75rem;
+          padding: 5px 11px;
+          border-radius: 9999px;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          text-align: left;
+        }
+
+        .prompt-chip:hover {
+          background: #FBF0EF;
+          border-color: #9B2226;
+          color: #9B2226;
+          transform: translateY(-1px);
+        }
+
+        .char-counter-pill {
+          font-size: 0.7rem;
+          color: #8C827A;
+          font-weight: 600;
+        }
+
+        .char-counter-pill.warning {
+          color: #DC2626;
+          font-weight: 700;
+        }
+
+        .letter-textarea {
+          font-family: var(--font-sans, 'Plus Jakarta Sans', sans-serif);
+          font-size: 0.9375rem;
+          line-height: 1.7;
+          background: #FAF7F2;
+          border: 1.5px solid #E5D9C8;
+          border-radius: 14px;
+          padding: 14px 16px;
+          min-height: 150px;
+          resize: vertical;
+          width: 100%;
+          outline: none;
+          transition: all 0.22s ease;
+          box-sizing: border-box;
+        }
+
+        .letter-textarea:focus {
+          background: #FFFFFF;
+          border-color: #9B2226;
+          box-shadow: 0 0 0 3.5px rgba(155, 34, 38, 0.12), 0 2px 8px rgba(155, 34, 38, 0.06);
+        }
+
+        /* --- Surprise Section --- */
         .surprise-edit-box {
-          background: #FAF4E8;
-          border: 1px dashed var(--color-gold);
-          border-radius: var(--radius-md);
-          padding: var(--space-5);
-          margin-bottom: var(--space-6);
+          margin-top: 1.75rem;
+          padding: 1.25rem;
+          background: #FDF9F2;
+          border: 1.5px dashed #DFC9A8;
+          border-radius: 14px;
+        }
+
+        .surprise-header-row {
+          display: flex;
+          align-items: flex-start;
+          gap: 10px;
+        }
+
+        .surprise-header-icon {
+          color: #C69234;
+          flex-shrink: 0;
+          margin-top: 2px;
         }
 
         .surprise-box-title {
-          font-size: var(--text-sm);
+          font-family: var(--font-serif, 'Playfair Display', Georgia, serif);
+          font-size: 1.1rem;
           font-weight: 700;
-          color: var(--text-primary);
-          margin-bottom: var(--space-3);
+          margin: 0 0 2px 0;
+          color: #2D1D13;
         }
 
-        /* Themes */
+        .surprise-box-sub {
+          font-size: 0.775rem;
+          color: #7A624E;
+          margin: 0;
+        }
+
         .themes-grid {
           display: grid;
           grid-template-columns: repeat(2, 1fr);
-          gap: var(--space-4);
-          margin-bottom: var(--space-8);
+          gap: 1rem;
+          margin: 1.25rem 0;
         }
 
         .theme-card {
-          background: #FFFFFF;
-          border: 2px solid var(--border-default);
-          border-radius: var(--radius-lg);
-          padding: var(--space-5);
+          background: #FFFDF9;
+          border: 2px solid #EFE6D8;
+          border-radius: var(--radius-lg, 12px);
+          padding: 1rem;
           cursor: pointer;
-          transition: all 0.2s;
-        }
-
-        .theme-card:hover {
-          border-color: var(--border-strong);
+          transition: all 0.2s ease;
+          position: relative;
         }
 
         .theme-card.selected {
-          border-color: var(--color-rakhi-red);
-          background: var(--color-rakhi-light);
-          box-shadow: var(--shadow-sm);
+          border-color: var(--color-rakhi-red, #9B2226);
+          background: #FFFDFB;
+          box-shadow: 0 0 0 1px var(--color-rakhi-red, #9B2226);
+        }
+
+        .theme-card.disabled {
+          opacity: 0.45;
+          cursor: not-allowed;
         }
 
         .theme-header {
@@ -1453,27 +1418,59 @@ export const CreatorPage = () => {
         }
 
         .theme-name {
-          font-family: var(--font-serif);
-          font-size: 1.2rem;
-          color: var(--text-primary);
+          font-family: var(--font-serif, 'Playfair Display', Georgia, serif);
+          font-size: 1.1rem;
+          font-weight: 700;
+          margin: 0;
         }
 
         .theme-check-icon {
-          color: var(--color-rakhi-red);
+          color: var(--color-rakhi-red, #9B2226);
         }
 
         .theme-badge {
           display: inline-block;
-          font-size: 11px;
-          font-weight: 600;
-          color: var(--color-gold);
-          margin-bottom: var(--space-2);
+          font-size: 10px;
+          font-weight: 700;
+          color: #7A5813;
+          background: rgba(198, 146, 52, 0.12);
+          padding: 1px 7px;
+          border-radius: 9999px;
+          margin-bottom: 6px;
         }
 
         .theme-desc {
-          font-size: var(--text-xs);
-          color: var(--text-secondary);
-          margin-bottom: var(--space-4);
+          font-size: 0.775rem;
+          color: var(--text-secondary, #59524C);
+          margin: 0 0 10px 0;
+          line-height: 1.35;
+        }
+
+        .theme-mini-visual {
+          position: relative;
+          padding: 8px 12px;
+          border-radius: 6px;
+          border: 1px solid #DFCDB4;
+          margin-bottom: 10px;
+          overflow: hidden;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+        }
+
+        .mini-thread-line {
+          position: absolute;
+          left: 0;
+          top: 0;
+          bottom: 0;
+          width: 3px;
+        }
+
+        .mini-sample-text {
+          font-size: 0.85rem;
+          font-weight: 600;
+          letter-spacing: -0.01em;
         }
 
         .theme-swatches {
@@ -1482,285 +1479,203 @@ export const CreatorPage = () => {
         }
 
         .swatch {
-          width: 22px;
-          height: 22px;
+          width: 16px;
+          height: 16px;
           border-radius: 50%;
-          border: 1px solid rgba(0, 0, 0, 0.1);
+          border: 1px solid rgba(0,0,0,0.1);
         }
 
-        /* Preview Box */
-        .preview-banner {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: var(--space-2);
-          background: #FAF5ED;
-          border: 1px solid var(--border-gold);
-          padding: var(--space-3) var(--space-4);
-          border-radius: var(--radius-md);
-          font-size: var(--text-xs);
-          font-weight: 600;
-          color: var(--text-primary);
-          margin-bottom: var(--space-6);
+        .theme-tier-lock {
+          font-size: 10px;
+          font-weight: 700;
+          color: #B58428;
+          margin-top: 6px;
+        }
+
+        .preview-mode-wrapper {
+          width: 100%;
         }
 
         .preview-wall-box {
-          margin-bottom: var(--space-8);
+          background: var(--bg-primary, #FAF7F2);
+          border-radius: var(--radius-xl, 16px);
+          box-shadow: 0 20px 40px rgba(45, 30, 15, 0.08);
+          overflow: hidden;
+          margin-bottom: 1.5rem;
         }
 
-        /* Plan Selection */
-        .plan-selection-grid {
-          display: grid;
-          grid-template-columns: repeat(3, 1fr);
-          gap: var(--space-4);
-          margin-bottom: var(--space-6);
+        .preview-actions {
+          display: flex;
+          justify-content: space-between;
+          padding: 1rem 0;
         }
 
-        .plan-card {
-          background: #FFFFFF;
-          border: 2px solid var(--border-default);
-          border-radius: var(--radius-lg);
-          padding: var(--space-5);
-          cursor: pointer;
-          position: relative;
-          transition: all 0.2s;
+        .payment-summary-box {
+          background: #F8F6F0;
+          border: 1px solid #EFE6D8;
+          border-radius: var(--radius-lg, 12px);
+          padding: 1.25rem;
+          margin: 1.25rem 0;
         }
 
-        .plan-card.active-plan {
-          border-color: var(--color-gold);
-          background: #FFFDF8;
-          box-shadow: 0 4px 16px rgba(198, 146, 52, 0.25);
+        .summary-row {
+          display: flex;
+          justify-content: space-between;
+          font-size: 0.9rem;
+          margin-bottom: 8px;
         }
 
-        .plan-tag {
-          position: absolute;
-          top: -10px;
-          left: 50%;
-          transform: translateX(-50%);
-          background: var(--color-gold);
-          color: #FFFFFF;
-          font-size: 10px;
+        .summary-row.total-row {
+          border-top: 1px solid #EFE6D8;
+          padding-top: 10px;
+          margin-top: 10px;
           font-weight: 700;
-          padding: 2px 10px;
-          border-radius: var(--radius-full);
+          font-size: 1.1rem;
         }
 
-        .plan-title {
-          font-size: var(--text-sm);
-          font-weight: 700;
-          color: var(--text-primary);
-          margin-bottom: 4px;
-        }
-
-        .plan-price {
-          font-family: var(--font-serif);
-          font-size: 1.75rem;
-          font-weight: 700;
-          color: var(--color-rakhi-red);
-          margin-bottom: 4px;
-        }
-
-        .plan-desc {
-          font-size: var(--text-xs);
-          color: var(--text-secondary);
+        .total-price {
+          color: var(--color-rakhi-red, #9B2226);
         }
 
         .payment-security-notice {
           display: flex;
           align-items: center;
-          gap: var(--space-3);
-          background: #FAF5EC;
-          border: 1px solid var(--border-light);
-          padding: var(--space-3) var(--space-4);
-          border-radius: var(--radius-md);
-          font-size: var(--text-xs);
-          color: var(--text-secondary);
-          margin-bottom: var(--space-6);
+          gap: 10px;
+          font-size: 0.8rem;
+          color: var(--text-secondary, #59524C);
+          margin-bottom: 1.5rem;
         }
 
-        /* Completion Step */
         .completion-card {
           text-align: center;
-          padding: clamp(2rem, 6vw, 4rem);
-          max-width: 680px;
-          margin: 0 auto;
+          padding: 2.5rem 1.5rem;
         }
 
         .completion-emblem {
-          width: 60px;
-          height: 60px;
+          width: 64px;
+          height: 64px;
           border-radius: 50%;
-          background: var(--color-rakhi-light);
+          background: rgba(155, 34, 38, 0.1);
           display: flex;
           align-items: center;
           justify-content: center;
-          margin: 0 auto var(--space-4) auto;
-          box-shadow: 0 4px 14px var(--color-rakhi-glow);
+          margin: 0 auto 1rem auto;
         }
 
         .completion-heart {
-          color: var(--color-rakhi-red);
-          fill: var(--color-rakhi-red);
+          color: var(--color-rakhi-red, #9B2226);
+          fill: var(--color-rakhi-red, #9B2226);
         }
 
         .completion-title {
-          font-size: 2.2rem;
-          color: var(--text-primary);
-          margin-bottom: var(--space-2);
+          font-family: var(--font-serif, 'Playfair Display', Georgia, serif);
+          font-size: 1.8rem;
+          margin: 0 0 6px 0;
         }
 
         .completion-subtitle {
-          font-size: var(--text-base);
-          color: var(--text-secondary);
-          margin-bottom: var(--space-8);
+          font-size: 0.9rem;
+          color: var(--text-secondary, #59524C);
+          margin: 0 0 1.5rem 0;
+        }
+
+        .receipt-box {
+          background: #F8F6F0;
+          border: 1px solid #EFE6D8;
+          border-radius: 8px;
+          padding: 10px 14px;
+          margin-bottom: 1.25rem;
+          font-size: 0.85rem;
+          text-align: left;
+        }
+
+        .receipt-row {
+          display: flex;
+          justify-content: space-between;
+          margin-bottom: 4px;
+        }
+
+        .receipt-status {
+          color: #15803D;
+          font-weight: 600;
+        }
+
+        .receipt-row-sub {
+          display: flex;
+          justify-content: space-between;
+          font-size: 0.75rem;
+          opacity: 0.75;
         }
 
         .gift-link-box {
           display: flex;
           align-items: center;
           justify-content: space-between;
-          background: #FFFFFF;
-          border: 2px solid var(--border-gold);
-          border-radius: var(--radius-md);
-          padding: var(--space-3) var(--space-4);
-          margin-bottom: var(--space-8);
-          gap: var(--space-3);
+          background: #FFFDF9;
+          border: 1px solid #EFE6D8;
+          padding: 8px 12px;
+          border-radius: 8px;
+          margin-bottom: 1.5rem;
+          gap: 10px;
         }
 
         .link-text {
           font-family: monospace;
-          font-size: var(--text-sm);
-          color: var(--color-rakhi-red);
-          font-weight: 700;
+          font-size: 0.85rem;
+          color: var(--text-primary, #1E1B18);
           word-break: break-all;
-          text-align: left;
         }
 
         .qr-container {
-          background: #FAF7F2;
-          border: 1px solid var(--border-default);
-          border-radius: var(--radius-lg);
-          padding: var(--space-6);
-          margin-bottom: var(--space-8);
-          display: flex;
-          flex-direction: column;
-          align-items: center;
+          margin: 1.5rem 0;
         }
 
         .qr-title {
-          font-size: var(--text-sm);
-          font-weight: 700;
-          color: var(--text-primary);
-          margin-bottom: var(--space-4);
+          font-family: var(--font-serif, 'Playfair Display', Georgia, serif);
+          font-size: 1.1rem;
+          margin: 0 0 10px 0;
         }
 
         .qr-image-wrapper {
-          background: #FFFFFF;
-          padding: var(--space-3);
-          border-radius: var(--radius-md);
-          box-shadow: var(--shadow-sm);
-          margin-bottom: var(--space-3);
+          display: inline-block;
+          background: #FFF;
+          padding: 10px;
+          border: 1px solid #EFE6D8;
+          border-radius: 12px;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.06);
         }
 
         .qr-image {
           width: 180px;
           height: 180px;
+          display: block;
         }
 
         .qr-hint {
-          font-size: var(--text-xs);
-          color: var(--text-muted);
-          margin: 0;
+          font-size: 0.775rem;
+          color: var(--text-secondary, #59524C);
+          margin-top: 6px;
         }
 
         .completion-actions {
           display: flex;
           align-items: center;
           justify-content: center;
-          gap: var(--space-4);
+          gap: 12px;
         }
 
-        .creator-error-banner {
-          display: flex;
-          align-items: center;
-          gap: var(--space-2);
-          background: #FDF2F0;
-          color: var(--color-rakhi-red);
-          border: 1px solid rgba(155, 34, 38, 0.2);
-          padding: var(--space-3) var(--space-4);
-          border-radius: var(--radius-md);
-          font-size: var(--text-sm);
-          font-weight: 600;
-          margin-bottom: var(--space-6);
-        }
-
-        .wall-preview-modal-backdrop {
-          position: fixed;
-          inset: 0;
-          background: rgba(28, 25, 23, 0.85);
-          backdrop-filter: blur(8px);
-          -webkit-backdrop-filter: blur(8px);
-          z-index: var(--z-modal-backdrop);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          padding: var(--space-4);
-          animation: fadeIn 0.2s ease-out;
-        }
-
-        .wall-preview-modal-card {
-          max-width: 1080px;
-          width: 100%;
-          max-height: 90vh;
-          overflow-y: auto;
-          padding: var(--space-6);
-          box-shadow: var(--shadow-2xl);
-        }
-
-        .preview-modal-header {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          margin-bottom: var(--space-4);
-          padding-bottom: var(--space-3);
-          border-bottom: 1px solid var(--border-light);
-        }
-
-        .preview-title-wrap {
-          display: flex;
-          align-items: center;
-          gap: var(--space-2);
-        }
-
-        .preview-title-wrap h3 {
-          margin: 0;
-          font-size: 1.25rem;
-          color: var(--text-primary);
-        }
-
-        .preview-close-btn {
-          background: transparent;
-          border: none;
-          color: var(--text-muted);
-          font-size: 18px;
-          cursor: pointer;
-          padding: 4px 8px;
-          border-radius: 4px;
-        }
-
-        .preview-close-btn:hover {
-          background: var(--bg-subtle);
-          color: var(--text-primary);
-        }
-
-        @media (max-width: 768px) {
-          .form-grid,
-          .themes-grid,
-          .plan-selection-grid {
+        @media (max-width: 640px) {
+          .form-grid {
             grid-template-columns: 1fr;
           }
-          .photos-grid {
-            grid-template-columns: repeat(2, 1fr);
+          .form-group.full-width {
+            grid-column: span 1;
+          }
+          .themes-grid {
+            grid-template-columns: 1fr;
+          }
+          .completion-actions {
+            flex-direction: column;
           }
         }
       `}</style>

@@ -8,20 +8,20 @@ export const PricingSection = () => {
 
   const faqs = [
     {
-      q: "Does my sibling need to download an app to view their gift?",
-      a: "No! The gift is delivered as a private, fast web link. It opens instantly in any browser on mobile, tablet, or desktop with no login or app installation required."
+      q: "Does my sister need to download an app to view her gift?",
+      a: "No! The gift is delivered as a private web link. It opens instantly in any mobile or desktop browser with no login, sign-up, or app installation needed."
     },
     {
       q: "How long does the unique gift link remain active?",
-      a: "All gifts include permanent hosting. Your sibling can revisit their 3D memory wall next week, next Rakhi, or 5 years from now."
+      a: "Every paid gift includes permanent private hosting. Your sister can revisit her Memory Wall and letter anytime from any device."
     },
     {
-      q: "Can I print the QR code to put inside a physical gift or sweet box?",
-      a: "Yes! Premium and Deluxe tiers generate a high-resolution printable QR card that you can download and slip inside your courier or sweet hamper."
+      q: "Can I print the QR code to slip inside a physical gift hamper?",
+      a: "Yes! All packages generate a high-resolution printable QR code card that you can download and slip inside your Rakhi envelope, sweets box, or courier hamper."
     },
     {
-      q: "What if I need to edit a photo caption after creating the gift?",
-      a: "You can preview your entire memory gift before finalizing. In Phase 2, creator edit tokens will let you tweak captions anytime."
+      q: "Can I preview the gift before paying?",
+      a: "Yes! You can see the full live recipient experience in Step 7, change visual themes, and fine-tune your memories before completing activation."
     }
   ];
 
@@ -35,10 +35,10 @@ export const PricingSection = () => {
             <span>Simple, Transparent Gifting</span>
           </div>
           <h2 className="section-title">
-            One-time gift, <span className="title-serif-accent">lifetime keepsake.</span>
+            One-time gift, <span className="title-serif-accent">permanent keepsake.</span>
           </h2>
           <p className="section-subtitle">
-            No recurring subscriptions or hidden fees. Choose the tier that best fits your story.
+            No recurring subscriptions, no ads, and no hidden fees. Choose the tier that best fits your memories.
           </p>
         </div>
 

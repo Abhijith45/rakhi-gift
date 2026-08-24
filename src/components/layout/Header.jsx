@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Menu, X, Sparkles, Heart } from 'lucide-react';
+import { Menu, X, Sparkles } from 'lucide-react';
 import Button from '../common/Button';
+import { Link } from '../../router';
 
 export const Header = () => {
   const [scrolled, setScrolled] = useState(false);
@@ -14,26 +15,36 @@ export const Header = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && mobileMenuOpen) {
+        setMobileMenuOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [mobileMenuOpen]);
+
   return (
     <header className={`site-header ${scrolled ? 'header-scrolled' : ''}`}>
       <div className="container header-inner">
         {/* Brand / Logo */}
-        <a href="#" className="brand-logo" aria-label="Rakhi Gift Home">
+        <Link to="/" className="brand-logo" aria-label="Rakhi Gift Home">
           <div className="logo-emblem">
             <div className="emblem-inner" />
           </div>
           <span className="logo-text">
             Rakhi<span className="logo-accent">Gift</span>
           </span>
-        </a>
+        </Link>
 
         {/* Desktop Navigation */}
         <nav className="nav-desktop" aria-label="Main Navigation">
-          <a href="#memory-wall" className="nav-link">Memory Wall</a>
-          <a href="#how-it-works" className="nav-link">How It Works</a>
-          <a href="#experience-preview" className="nav-link">Preview</a>
-          <a href="#features" className="nav-link">Features</a>
-          <a href="#pricing" className="nav-link">Pricing</a>
+          <a href="/#memory-wall" className="nav-link">Memory Wall</a>
+          <a href="/#how-it-works" className="nav-link">How It Works</a>
+          <a href="/#experience-preview" className="nav-link">Preview</a>
+          <a href="/#features" className="nav-link">Features</a>
+          <a href="/#pricing" className="nav-link">Pricing</a>
         </nav>
 
         {/* Header Action CTA */}
@@ -121,14 +132,13 @@ export const Header = () => {
           right: 0;
           height: var(--header-height);
           z-index: var(--z-header);
-          transition: background-color var(--transition-normal), box-shadow var(--transition-normal), backdrop-filter var(--transition-normal);
+          transition: background-color var(--transition-normal), border-color var(--transition-normal), backdrop-filter var(--transition-normal);
         }
 
         .header-scrolled {
-          background-color: rgba(250, 247, 242, 0.92);
+          background-color: var(--bg-primary, #FAF7F2);
           backdrop-filter: blur(12px);
           -webkit-backdrop-filter: blur(12px);
-          box-shadow: 0 1px 0 var(--border-light), 0 4px 16px rgba(30, 27, 24, 0.04);
         }
 
         .header-inner {
@@ -147,6 +157,7 @@ export const Header = () => {
           font-weight: 700;
           color: var(--text-primary);
           letter-spacing: -0.02em;
+          text-decoration: none;
         }
 
         .logo-emblem {
@@ -157,7 +168,6 @@ export const Header = () => {
           display: flex;
           align-items: center;
           justify-content: center;
-          box-shadow: 0 2px 8px var(--color-rakhi-glow);
           position: relative;
         }
 
@@ -199,6 +209,7 @@ export const Header = () => {
           color: var(--text-secondary);
           position: relative;
           padding: var(--space-1) 0;
+          text-decoration: none;
         }
 
         .nav-link::after {
@@ -224,18 +235,28 @@ export const Header = () => {
         .header-actions {
           display: flex;
           align-items: center;
-          gap: var(--space-3);
+          gap: var(--space-4);
         }
 
         .mobile-toggle {
           display: none;
+          align-items: center;
+          justify-content: center;
+          width: 44px;
+          height: 44px;
+          min-width: 44px;
+          min-height: 44px;
           color: var(--text-primary);
-          padding: var(--space-2);
-          border-radius: var(--radius-sm);
+          background: none;
+          border: none;
+          cursor: pointer;
+          border-radius: var(--radius-sm, 6px);
+          transition: background-color 0.2s ease;
         }
 
-        .mobile-toggle:hover {
-          background-color: var(--bg-subtle);
+        .mobile-toggle:hover,
+        .mobile-toggle:focus-visible {
+          background-color: var(--bg-subtle, rgba(0, 0, 0, 0.04));
         }
 
         .nav-mobile-overlay {
@@ -243,40 +264,70 @@ export const Header = () => {
           top: var(--header-height);
           left: 0;
           right: 0;
-          bottom: 0;
-          background-color: rgba(250, 247, 242, 0.97);
-          backdrop-filter: blur(16px);
-          -webkit-backdrop-filter: blur(16px);
-          padding: var(--space-8) var(--space-6);
-          border-top: 1px solid var(--border-light);
-          animation: fadeIn 0.25s var(--ease-soft);
+          background-color: var(--bg-surface);
+          border-bottom: 1px solid var(--border-light);
+          padding: var(--space-6) var(--space-4);
+          z-index: var(--z-dropdown);
+          animation: slideDown 0.25s ease-out;
         }
 
         .nav-mobile {
           display: flex;
           flex-direction: column;
-          gap: var(--space-5);
+          gap: var(--space-4);
         }
 
         .mobile-nav-link {
-          font-family: var(--font-serif);
-          font-size: 1.4rem;
+          font-size: var(--text-base);
           font-weight: 600;
-          color: var(--text-primary);
+          color: var(--text-secondary);
           padding: var(--space-2) 0;
-          border-bottom: 1px solid var(--border-light);
+          text-decoration: none;
+          min-height: 44px;
+          display: flex;
+          align-items: center;
+        }
+
+        .mobile-nav-link:hover {
+          color: var(--color-rakhi-red);
         }
 
         .mobile-menu-cta {
-          margin-top: var(--space-6);
+          padding-top: var(--space-4);
+          border-top: 1px solid var(--border-light);
         }
 
-        @media (max-width: 860px) {
+        @keyframes slideDown {
+          from {
+            opacity: 0;
+            transform: translateY(-8px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        @media (max-width: 1024px) {
           .nav-desktop {
             display: none;
           }
           .mobile-toggle {
             display: flex;
+          }
+        }
+
+        @media (max-width: 480px) {
+          .brand-logo {
+            font-size: 1.15rem;
+            gap: var(--space-2);
+          }
+          .header-actions {
+            gap: var(--space-2);
+          }
+          .header-actions .btn {
+            padding: 6px 10px;
+            font-size: var(--text-xs, 0.75rem);
           }
         }
       `}</style>

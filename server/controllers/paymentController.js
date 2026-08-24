@@ -66,12 +66,15 @@ export async function createPaymentOrder(req, res) {
       success: true,
       data: {
         orderId: orderData.orderId,
-        amount: planConfig.amount,
+        amount: planConfig.amount,             // INR for display
+        amountInPaise: orderData.amountInPaise, // Paise — server-locked, used directly in Razorpay checkout
         currency: 'INR',
         keyId: orderData.keyId,
         giftId: gift.id,
         recipientName: gift.recipientName,
-        plan: planConfig.plan
+        plan: planConfig.plan,
+        planName: orderData.planName,
+        planDescription: orderData.planDescription
       }
     });
   } catch (err) {

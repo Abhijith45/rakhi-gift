@@ -18,6 +18,9 @@ import { uploadGiftPhotos } from '../../../services/api';
 export const ImageUploader = ({
   giftId,
   initialPhotos = [],
+  maxPhotos = 8,
+  allowCaptions = true,
+  allowDates = true,
   onChange,
   onOpenPreview
 }) => {
@@ -35,6 +38,7 @@ export const ImageUploader = ({
         previewUrl: p.imageUrl || p.url,
         croppedDataUrl: p.imageUrl || p.url,
         caption: p.caption || '',
+        date: p.date || '',
         status: p.cloudinaryPublicId ? 'UPLOADED' : 'READY',
         cloudinaryPublicId: p.cloudinaryPublicId || null,
         url: p.imageUrl || p.url,
@@ -63,7 +67,8 @@ export const ImageUploader = ({
         imageUrl: p.croppedDataUrl || p.previewUrl || p.url,
         url: p.url || p.croppedDataUrl || p.previewUrl,
         cloudinaryPublicId: p.cloudinaryPublicId,
-        caption: p.caption,
+        caption: p.caption || null,
+        date: p.date || null,
         frameVariant: p.caption ? 'caption' : 'classic',
         displayOrder: idx,
         aspectRatio: 1.333
@@ -158,6 +163,15 @@ export const ImageUploader = ({
     notifyParent(updated);
   };
 
+  // Update date
+  const handleDateChange = (photoId, newDate) => {
+    const updated = photos.map((p) =>
+      p.id === photoId ? { ...p, date: newDate } : p
+    );
+    setPhotos(updated);
+    notifyParent(updated);
+  };
+
   // Remove photo
   const handleRemovePhoto = (photoId) => {
     const photoToRemove = photos.find((p) => p.id === photoId);
@@ -226,6 +240,7 @@ export const ImageUploader = ({
       const payloadPhotos = photosToUpload.map((p) => ({
         data: p.croppedDataUrl,
         caption: p.caption || null,
+        date: p.date || null,
         frameVariant: p.caption ? 'caption' : 'classic',
         displayOrder: p.displayOrder
       }));
@@ -251,12 +266,7 @@ export const ImageUploader = ({
         notifyParent(updated);
       }
     } catch (err) {
-      console.error('Cloudinary upload error:', err);
-      setPhotos((prev) =>
-        prev.map((p) =>
-          p.status === 'UPLOADING' ? { ...p, status: 'FAILED' } : p
-        )
-      );
+      console.error('Failed to upload photos to Cloudinary:', err);
     } finally {
       setIsUploading(false);
     }
@@ -264,37 +274,23 @@ export const ImageUploader = ({
 
   return (
     <div className="image-uploader-root">
-      {/* Upload Zone */}
+      {/* Upload & Dropzone Area */}
       <DropZone
         onFilesSelected={handleFilesSelected}
-        disabled={isUploading || photos.length >= MAX_IMAGES}
         currentCount={photos.length}
-        errors={validationErrors}
+        maxCount={maxPhotos}
+        disabled={photos.length >= maxPhotos || isUploading}
       />
 
-      {/* Upload Progress Strip */}
-      {isUploading && (
-        <div className="upload-progress-bar-card">
-          <div className="progress-info-row">
-            <span className="progress-label">
-              <Loader2 size={14} className="spin-icon" /> Uploading Memories to Cloudinary...
-            </span>
-            <span className="progress-count">
-              {uploadProgress.current} of {uploadProgress.total} uploaded
-            </span>
-          </div>
-          <div className="progress-track">
-            <div
-              className="progress-fill"
-              style={{
-                width: `${
-                  uploadProgress.total > 0
-                    ? (uploadProgress.current / uploadProgress.total) * 100
-                    : 15
-                }%`
-              }}
-            />
-          </div>
+      {/* Validation Error Notices */}
+      {validationErrors.length > 0 && (
+        <div className="uploader-errors-list">
+          {validationErrors.map((err, idx) => (
+            <div key={idx} className="uploader-error-item">
+              <AlertCircle size={14} className="err-icon" />
+              <span>{err}</span>
+            </div>
+          ))}
         </div>
       )}
 
@@ -304,7 +300,7 @@ export const ImageUploader = ({
           <div className="photos-header-row">
             <div className="section-title-wrap">
               <h4 className="photos-grid-title">
-                Arranged Memories ({photos.length} of {MAX_IMAGES})
+                Arranged Memories ({photos.length} of {maxPhotos})
               </h4>
               <p className="photos-grid-sub">
                 All photos are cropped to 4:3. Click any image to adjust crop or add captions.
@@ -331,11 +327,14 @@ export const ImageUploader = ({
                 photo={photo}
                 index={index}
                 total={photos.length}
+                allowCaptions={allowCaptions}
+                allowDates={allowDates}
                 onEditCrop={handleEditCrop}
                 onRemove={handleRemovePhoto}
                 onMoveUp={handleMoveUp}
                 onMoveDown={handleMoveDown}
                 onCaptionChange={handleCaptionChange}
+                onDateChange={handleDateChange}
               />
             ))}
           </div>

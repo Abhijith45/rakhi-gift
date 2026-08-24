@@ -1,62 +1,89 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Sparkles, Info, Heart } from 'lucide-react';
+import { Sparkles, Heart, Award } from 'lucide-react';
 import WallBackground from './WallBackground';
 import ThreadLayer from './ThreadLayer';
 import PhotoFrame from './PhotoFrame';
-import DecorativeCard from './DecorativeCard';
 import MemoryWallOverlay from './MemoryWallOverlay';
 import { getWallLayout, getThreadConnections } from './layoutUtils';
+import { getWallConfig } from './wallConfig';
 
-export const MemoryWall = ({ gift, mode = 'full' }) => {
+/**
+ * Package-Aware 2.5D Physical Memory Wall Component
+ * Supports BASIC (₹99), PREMIUM (₹249), and DELUXE (₹449) tiers
+ * across Mobile (320-430px), Tablet (768-1024px), and Desktop (1280px+).
+ */
+export const MemoryWall = ({
+  gift,
+  plan,
+  theme = null,
+  mode = 'full'
+}) => {
   const [selectedPhoto, setSelectedPhoto] = useState(null);
-  const [isMobile, setIsMobile] = useState(false);
+  const [viewport, setViewport] = useState('desktop');
 
-  const rawPhotos = useMemo(() => {
-    return gift?.photos && gift.photos.length > 0 ? gift.photos : [];
-  }, [gift]);
+  const resolvedTheme = theme || gift?.theme || 'warm-memory';
 
-  // Window resize handler
+  // Normalize package tier: explicit prop > gift object > default 'PREMIUM'
+  const currentPlan = useMemo(() => {
+    const p = plan || gift?.plan || 'PREMIUM';
+    return (p || 'PREMIUM').toUpperCase();
+  }, [plan, gift?.plan]);
+
+  const config = useMemo(() => {
+    return getWallConfig(currentPlan);
+  }, [currentPlan]);
+
+  // Window resize listener detecting viewport breakpoint
   useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
+    const handleResize = () => {
+      const w = window.innerWidth;
+      if (w <= 640) {
+        setViewport('mobile');
+      } else if (w <= 1024) {
+        setViewport('tablet');
+      } else {
+        setViewport('desktop');
+      }
     };
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  const isMobile = viewport === 'mobile';
+  const isTablet = viewport === 'tablet';
+
+  // Filter raw photos according to package entitlements
+  const rawPhotos = useMemo(() => {
+    const all = gift?.photos && gift.photos.length > 0 ? gift.photos : [];
+    return all.slice(0, config.maxPhotos);
+  }, [gift?.photos, config.maxPhotos]);
 
   // Compute positioned photos & thread pairings
   const positionedPhotos = useMemo(() => {
-    return getWallLayout(rawPhotos, isMobile);
-  }, [rawPhotos, isMobile]);
+    return getWallLayout(rawPhotos, viewport, currentPlan);
+  }, [rawPhotos, viewport, currentPlan]);
 
   const threadPairs = useMemo(() => {
-    return getThreadConnections(rawPhotos.length);
-  }, [rawPhotos.length]);
+    return getThreadConnections(positionedPhotos.length, currentPlan, viewport);
+  }, [positionedPhotos.length, currentPlan, viewport]);
+
+  const isDeluxe = currentPlan === 'DELUXE';
+  const isBasic = currentPlan === 'BASIC';
 
   return (
-    <div className={`memory-wall-wrapper mode-${mode}`}>
-      {/* Top Interactive Banner / Hint */}
-      <div className="memory-wall-toolbar">
-        <div className="wall-status-pill">
-          <Sparkles size={14} className="sparkle-gold" />
-          <span>Interactive Memory Wall — Mounted with brass clips & sacred thread</span>
-        </div>
-
-        <div className="wall-photo-counter">
-          <Heart size={13} className="counter-heart" />
-          <span>{rawPhotos.length} Memories Connected</span>
-        </div>
-      </div>
-
+    <div className={`memory-wall-wrapper mode-${mode} plan-${currentPlan.toLowerCase()} viewport-${viewport}`}>
       {/* Main Physical Wall Stage */}
       <div className="memory-wall-stage">
-        <WallBackground>
-          {/* Crimson Thread Layer (Behind Frames) */}
+        <WallBackground plan={currentPlan} theme={resolvedTheme}>
+          {/* Sacred Silk Thread Layer (Behind Frames) */}
           <ThreadLayer
             photos={positionedPhotos}
             connections={threadPairs}
+            viewport={viewport}
             isMobile={isMobile}
+            plan={currentPlan}
+            theme={resolvedTheme}
           />
 
           {/* Mounted Physical Photo Frames */}
@@ -66,27 +93,26 @@ export const MemoryWall = ({ gift, mode = 'full' }) => {
               photo={photo}
               index={index}
               onClick={setSelectedPhoto}
+              viewport={viewport}
               isMobile={isMobile}
+              isTablet={isTablet}
+              plan={currentPlan}
+              theme={resolvedTheme}
             />
           ))}
-
-          {/* Center-Bottom Decorative Quote Card */}
-          {!isMobile && (
-            <DecorativeCard top={72} left={50.5} rot={0.5} />
-          )}
         </WallBackground>
 
-        {/* Ambient Subtle Instructions Banner */}
+        {/* Ambient Subtle Keepsake Sentiment Banner */}
         <div className="wall-hint-overlay">
-          <Info size={13} />
-          <span>Click any photo to explore the memory & story</span>
+          <Heart size={13} className="counter-heart" />
+          <span>Some bonds are meant to be celebrated forever.</span>
         </div>
       </div>
 
       {/* Click-to-inspect Modal Overlay */}
       <MemoryWallOverlay
         photo={selectedPhoto}
-        allPhotos={rawPhotos}
+        allPhotos={positionedPhotos}
         onClose={() => setSelectedPhoto(null)}
         onSelectPhoto={setSelectedPhoto}
       />
@@ -95,55 +121,28 @@ export const MemoryWall = ({ gift, mode = 'full' }) => {
         .memory-wall-wrapper {
           position: relative;
           width: 100%;
-          border-radius: var(--radius-xl);
-          background: var(--bg-surface);
-          border: 1px solid var(--border-default);
-          box-shadow: var(--shadow-xl);
+          border-radius: var(--radius-xl, 16px);
+          background: var(--bg-surface, #FAF7F2);
+          border: 1px solid var(--border-default, #E8DFD3);
+          box-shadow: var(--shadow-xl, 0 20px 40px rgba(45, 30, 15, 0.08));
           overflow: hidden;
+          transition: border-color 0.3s ease, box-shadow 0.3s ease;
         }
 
-        .memory-wall-toolbar {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          padding: var(--space-3) var(--space-6);
-          background: #FAF5ED;
-          border-bottom: 1px solid var(--border-light);
-          font-size: var(--text-xs);
-        }
-
-        .wall-status-pill {
-          display: flex;
-          align-items: center;
-          gap: var(--space-2);
-          font-weight: 600;
-          color: var(--text-secondary);
-        }
-
-        .sparkle-gold {
-          color: var(--color-gold);
-        }
-
-        .wall-photo-counter {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          font-size: var(--text-xs);
-          font-weight: 600;
-          color: var(--color-rakhi-red);
-          background: var(--color-rakhi-light);
-          padding: 3px 12px;
-          border-radius: var(--radius-full);
-        }
-
-        .counter-heart {
-          fill: var(--color-rakhi-red);
+        .memory-wall-wrapper.plan-deluxe {
+          border-color: #D5BE9E;
+          box-shadow: 
+            0 24px 54px -10px rgba(55, 35, 15, 0.18),
+            0 10px 24px -5px rgba(55, 35, 15, 0.08);
         }
 
         .memory-wall-stage {
           position: relative;
           width: 100%;
           overflow: visible;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
         }
 
         .wall-hint-overlay {
@@ -153,29 +152,42 @@ export const MemoryWall = ({ gift, mode = 'full' }) => {
           transform: translateX(-50%);
           display: inline-flex;
           align-items: center;
+          justify-content: center;
           gap: 6px;
           background: rgba(255, 253, 249, 0.92);
           backdrop-filter: blur(6px);
           -webkit-backdrop-filter: blur(6px);
-          border: 1px solid var(--border-light);
+          border: 1px solid var(--border-light, #EFE6D8);
           padding: 6px 16px;
-          border-radius: var(--radius-full);
-          font-size: var(--text-xs);
-          color: var(--text-secondary);
-          box-shadow: var(--shadow-sm);
+          border-radius: var(--radius-full, 9999px);
+          font-size: var(--text-xs, 0.75rem);
+          color: var(--text-secondary, #59524C);
+          box-shadow: var(--shadow-sm, 0 2px 4px rgba(0, 0, 0, 0.05));
           pointer-events: none;
           z-index: 15;
+          max-width: calc(100% - 24px);
           white-space: nowrap;
+          box-sizing: border-box;
+        }
+
+        .counter-heart {
+          color: var(--color-rakhi-red, #9B2226);
+          fill: var(--color-rakhi-red, #9B2226);
+          flex-shrink: 0;
+        }
+
+        .plan-deluxe .counter-heart {
+          color: #8E1616;
+          fill: #8E1616;
         }
 
         @media (max-width: 640px) {
-          .memory-wall-toolbar {
-            flex-direction: column;
-            gap: var(--space-2);
-            align-items: flex-start;
-          }
           .wall-hint-overlay {
-            display: none;
+            font-size: 10px;
+            padding: 4px 10px;
+            bottom: 8px;
+            white-space: normal;
+            text-align: center;
           }
         }
       `}</style>

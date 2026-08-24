@@ -9,6 +9,7 @@ export const mockGift = {
   recipientName: "Aarav",
   senderName: "Ananya",
   relationship: "Brother",
+  plan: "PREMIUM",
   theme: "warm-memory",
   tagline: "To the best brother, teammate, and lifelong partner in crime.",
   

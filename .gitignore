@@ -57,3 +57,10 @@ scratch/
 
 
 package-lock.json
+
+.agents
+.agents/*
+
+
+assets
+assets/*

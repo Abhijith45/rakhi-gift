@@ -109,16 +109,20 @@ export const Hero = () => {
         .hero-pill-badge {
           display: inline-flex;
           align-items: center;
+          justify-content: center;
           gap: var(--space-2);
-          padding: 6px 16px;
+          padding: 6px 14px;
           background-color: var(--bg-surface);
           border: 1px solid var(--border-gold);
           border-radius: var(--radius-full);
-          font-size: var(--text-xs);
+          font-size: clamp(0.6875rem, 2.4vw, 0.75rem);
           font-weight: 600;
           color: var(--color-rakhi-red);
           box-shadow: var(--shadow-sm);
           margin-bottom: var(--space-6);
+          max-width: 100%;
+          text-align: center;
+          box-sizing: border-box;
         }
 
         .pill-dot {
