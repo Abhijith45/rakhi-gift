@@ -80,7 +80,7 @@ export const GIFT_SECTION_CONFIG = {
     whySpecial: {
       enabled: true,
       eyebrow: 'THE SIBLING BOND',
-      title: "Reasons You're My Person",
+      title: "Why You Mean So Much to Me",
       subtitle: 'The little things, quiet moments, and unforgettable quirks that make you irreplaceable.',
       cardStyle: 'editorial',
       accentColor: 'var(--color-rakhi-red)'
@@ -90,7 +90,7 @@ export const GIFT_SECTION_CONFIG = {
       enabled: true,
       eyebrow: 'OUR JOURNEY TOGETHER',
       title: 'Moments Through The Years',
-      subtitle: 'From childhood chaos to lifelong friendship — each milestone connected by love.',
+      subtitle: 'From childhood chaos to lifelong friendship — each memory connected by love.',
       threadStyle: 'crimson-silk',
       cardStyle: 'polaroid-milestone'
     },
@@ -98,7 +98,7 @@ export const GIFT_SECTION_CONFIG = {
     siblingFun: {
       enabled: true,
       eyebrow: 'INSIDE JOKES & BANTER',
-      title: 'Our Sibling Superlatives',
+      title: 'Just Between Us — Sibling Banter',
       subtitle: 'The unwritten rules, shared quirks, and hilarious truths only we understand.',
       cardStyle: 'playful-editorial'
     },
@@ -128,7 +128,7 @@ export const GIFT_SECTION_CONFIG = {
     plan: 'DELUXE',
     // Hero configuration
     hero: {
-      eyebrow: 'Your Handcrafted Rakhi Keepsake',
+      eyebrow: 'A Handcrafted Rakhi Keepsake',
       badgeClass: 'badge-deluxe',
       accentLevel: 'luxury',
       showScrollCue: true,
@@ -146,8 +146,8 @@ export const GIFT_SECTION_CONFIG = {
     whySpecial: {
       enabled: true,
       eyebrow: 'TIMELESS MEMORIES',
-      title: "Things I'll Always Remember About You",
-      subtitle: 'A curated tribute to the laughter, protection, and unbreakable loyalty we share.',
+      title: "Why You Mean So Much to Me",
+      subtitle: 'A heartfelt tribute to the laughter, protection, and unconditional support we share.',
       cardStyle: 'deluxe-keepsake',
       accentColor: '#8E1616'
     },
@@ -155,8 +155,8 @@ export const GIFT_SECTION_CONFIG = {
     timeline: {
       enabled: true,
       eyebrow: 'A TIMELESS CHRONICLE',
-      title: 'Our Journey Across The Years',
-      subtitle: 'A handcrafted chronicle of the milestones, laughter, and unbreakable bonds we share.',
+      title: 'Moments Through The Years',
+      subtitle: 'A cherished chronicle of the milestones, laughter, and unbreakable bonds we share.',
       threadStyle: 'dual-gold-crimson',
       cardStyle: 'deluxe-gilded-milestone'
     },
@@ -164,8 +164,8 @@ export const GIFT_SECTION_CONFIG = {
     siblingFun: {
       enabled: true,
       eyebrow: 'THE SACRED SIBLING CODE',
-      title: 'Inside Jokes & Sibling Superlatives',
-      subtitle: 'A celebration of the hilarious chaos, fierce loyalty, and unwritten sibling contracts.',
+      title: 'Just Between Us — Sibling Banter',
+      subtitle: 'A celebration of the hilarious chaos, inside jokes, and unwritten sibling contracts.',
       cardStyle: 'deluxe-gilded-banter'
     },
     // Surprise Reveal

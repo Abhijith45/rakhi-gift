@@ -9,7 +9,7 @@ export const PLAN_CONFIG = {
     name: 'Basic Keepsake',
     price: 99,
     formattedPrice: '₹99',
-    tagline: 'A sweet digital card with 4 mounted photos & personalized Rakhi message.',
+    tagline: 'A beautiful Rakhi memory gift with 4 photos, Memory Wall & personalized letter.',
     maxPhotos: 4,
     captions: false,
     reasons: false,
@@ -28,7 +28,7 @@ export const PLAN_CONFIG = {
     name: 'Premium Memory',
     price: 249,
     formattedPrice: '₹249',
-    tagline: 'Our most loved gift — 8 photos, captions, reasons, timeline & inside jokes.',
+    tagline: 'A complete personalized Rakhi experience — 8 photos, captions, reasons, timeline & banter.',
     maxPhotos: 8,
     captions: true,
     reasons: true,
@@ -47,7 +47,7 @@ export const PLAN_CONFIG = {
     name: 'Deluxe Keepsake',
     price: 449,
     formattedPrice: '₹449',
-    tagline: 'The ultimate hamper — rich 2.5D visual treatment, jeweled tacks & gold trims.',
+    tagline: 'A crafted digital keepsake with luxury gold aesthetics, jeweled pins & multi-burst reveal.',
     maxPhotos: 8,
     captions: true,
     reasons: true,
@@ -58,7 +58,7 @@ export const PLAN_CONFIG = {
     revealLevel: 'deluxe',
     finalWishLevel: 'deluxe',
     popular: false,
-    badge: 'Deluxe Hamper'
+    badge: 'Deluxe Keepsake'
   }
 };
 

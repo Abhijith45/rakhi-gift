@@ -590,7 +590,7 @@ export const CreatorPage = () => {
                     Add & Crop Your Memories ({builderData.photos.length}/{activePlanConfig.maxPhotos})
                   </h3>
                   <p className="card-subtitle">
-                    Select up to {activePlanConfig.maxPhotos} photos for your {activePlanConfig.name}. Each image is cropped to 4:3 for the physical wire-grid Memory Wall.
+                    Select up to {activePlanConfig.maxPhotos} photos for your {activePlanConfig.name}. Each image is mounted onto the 3D connected Memory Wall.
                   </p>
                 </div>
               </div>
@@ -680,7 +680,7 @@ export const CreatorPage = () => {
                     value={builderData.message}
                     onChange={(e) => updateBuilderData({ message: e.target.value })}
                     maxLength={1200}
-                    placeholder="Dearest Sister, write your genuine emotions, heartfelt memories, and blessings here..."
+                    placeholder="Write what you want her to know — your favorite memories together, heartfelt gratitude, or a warm Rakhi blessing..."
                   />
                 </div>
               </div>
@@ -921,7 +921,7 @@ export const CreatorPage = () => {
             <div className="creator-step-card paper-card animate-fade-in">
               <h3 className="card-title">Activate Keepsake — {activePlanConfig.name}</h3>
               <p className="card-subtitle">
-                One-time secure UPI payment of {activePlanConfig.formattedPrice} with lifetime permanent link hosting for {builderData.recipientName}.
+                One-time secure payment of {activePlanConfig.formattedPrice} with permanent private link hosting for {builderData.recipientName}.
               </p>
 
               <div className="payment-summary-box">

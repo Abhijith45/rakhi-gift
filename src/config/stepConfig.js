@@ -22,64 +22,64 @@ export const ALL_STEPS = [
     id: STEP_IDS.DETAILS,
     title: 'Sister & Brother Details',
     shortLabel: 'Details',
-    heading: 'Create a special Rakhi gift for your sister ❤️',
-    subheading: 'Enter your name and your sister’s name to personalize the keepsake.'
+    heading: "Let's start with the two people this gift is about.",
+    subheading: 'Enter your names so we can personalize the hero, letter, and final wish.'
   },
   {
     id: STEP_IDS.PACKAGE,
     title: 'Select Keepsake Package',
     shortLabel: 'Package',
-    heading: 'Choose your gift package & feature tier',
-    subheading: 'Select the keepsake package that best fits your memories.'
+    heading: 'Choose how special you’d like to make it.',
+    subheading: 'Select the package tier that best fits your memories.'
   },
   {
     id: STEP_IDS.MEMORIES,
     title: 'Mount Your Cherished Memories',
     shortLabel: 'Memories',
-    heading: 'Add & crop your favorite photos',
-    subheading: 'Photos are mounted on the 2.5D physical Memory Wall.'
+    heading: 'Add the moments you’d never want to forget.',
+    subheading: 'Upload and crop your favorite photos for the 3D connected Memory Wall.'
   },
   {
     id: STEP_IDS.MESSAGE,
     title: 'Write Your Rakhi Message',
-    shortLabel: 'Message',
-    heading: 'Write your heartfelt Rakhi letter',
-    subheading: 'An intimate editorial letter that opens with a sacred wax seal.'
+    shortLabel: 'Letter',
+    heading: 'Write what you want her to know.',
+    subheading: 'An intimate letter that opens with an interactive wax seal on her gift page.'
   },
   {
     id: STEP_IDS.PERSONALIZE,
     title: 'Personalize Your Keepsake',
     shortLabel: 'Personalize',
-    heading: 'Why she is special & sibling memories',
-    subheading: 'Add reasons why your bond is unbreakable.'
+    heading: 'Add the little things only the two of you understand.',
+    subheading: 'Add reasons why your sister is special, milestone chapters, and inside jokes.'
   },
   {
     id: STEP_IDS.THEME,
     title: 'Choose Theme & Surprise Note',
     shortLabel: 'Theme',
-    heading: 'Choose visual theme & sealed surprise',
-    subheading: 'Select color palette, aesthetic theme, and secret promise.'
+    heading: 'Choose the look and add one last surprise.',
+    subheading: 'Select a visual mood and add a sealed promise or gift voucher.'
   },
   {
     id: STEP_IDS.PREVIEW,
     title: 'Live Recipient Experience Preview',
     shortLabel: 'Preview',
-    heading: 'Preview your sister’s live Rakhi gift',
-    subheading: 'This is exactly what she will experience when opening your gift.'
+    heading: 'See exactly what she’ll receive.',
+    subheading: 'Preview the live interactive gift before activating.'
   },
   {
     id: STEP_IDS.PAYMENT,
     title: 'Activate Your Gift',
     shortLabel: 'Payment',
-    heading: 'Activate your personalized Rakhi gift',
-    subheading: 'One-time secure UPI payment for permanent live hosting.'
+    heading: 'Activate your gift & generate your link.',
+    subheading: 'Complete one-time payment to generate your private URL and printable QR card.'
   },
   {
     id: STEP_IDS.SUCCESS,
-    title: 'Gift Activated!',
+    title: 'Gift Ready!',
     shortLabel: 'Ready',
-    heading: 'Your Rakhi gift is live!',
-    subheading: 'Share your gift URL or scan the high-res QR code card.'
+    heading: 'Your Rakhi gift is ready ❤️',
+    subheading: 'Share your private link on WhatsApp or print the high-res QR card.'
   }
 ];
 
@@ -102,7 +102,6 @@ export const getCreatorSteps = (planKey = 'PREMIUM') => {
   return filtered.map((step, idx) => ({
     ...step,
     stepIndex: idx + 1,
-    visibleStepNumber: idx + 1,
     totalVisibleSteps: visibleEditingStepsCount
   }));
 };
@@ -112,9 +111,4 @@ export const getStepById = (stepId, planKey = 'PREMIUM') => {
   return steps.find((s) => s.id === stepId) || steps[0];
 };
 
-export default {
-  STEP_IDS,
-  ALL_STEPS,
-  getCreatorSteps,
-  getStepById
-};
+export default getCreatorSteps;

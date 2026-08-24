@@ -13,9 +13,9 @@ export const PackageSelector = ({
   return (
     <div className="package-selector-card paper-card animate-fade-in">
       <div className="package-selector-header">
-        <h3 className="card-title">Choose Keepsake Package Tier</h3>
+        <h3 className="card-title">Choose How Special You'd Like to Make It</h3>
         <p className="card-subtitle">
-          Select your package before adding content. You can upgrade or change tiers anytime.
+          Select the package tier that best fits your memories. You can switch packages anytime during creation.
         </p>
       </div>
 
