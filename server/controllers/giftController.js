@@ -36,7 +36,7 @@ export async function createDraft(req, res) {
       memories = [],
       funItems = [],
       surprise = {}
-    } = req.body;
+    } = req.body || {};
 
     if (!senderName || !recipientName) {
       return res.status(400).json({
@@ -49,26 +49,30 @@ export async function createDraft(req, res) {
     }
 
     const validatedTheme = sanitizeTheme(theme);
+    const safeSurprise = surprise || {};
+    const safeReasons = Array.isArray(reasons) ? reasons : [];
+    const safeMemories = Array.isArray(memories) ? memories : [];
+    const safeFunItems = Array.isArray(funItems) ? funItems : [];
 
     const gift = await prisma.gift.create({
       data: {
         slug: null, // Public slug is created only after verified payment
-        senderName: senderName.trim(),
-        recipientName: recipientName.trim(),
-        relationship,
-        senderNickname: senderNickname?.trim() || null,
-        recipientNickname: recipientNickname?.trim() || null,
+        senderName: String(senderName).trim(),
+        recipientName: String(recipientName).trim(),
+        relationship: relationship || 'Sister',
+        senderNickname: senderNickname ? String(senderNickname).trim() : null,
+        recipientNickname: recipientNickname ? String(recipientNickname).trim() : null,
         theme: validatedTheme,
-        message: message.trim(),
-        plan: plan.toUpperCase(),
+        message: (message || '').trim(),
+        plan: (plan || 'PREMIUM').toUpperCase(),
         status: 'DRAFT',
-        surpriseBadge: surprise.badge || 'A Little Surprise For You',
-        surpriseTitle: surprise.title || 'One Last Promise...',
-        surpriseMessage: surprise.message || '',
-        surpriseVoucher: surprise.voucher || '',
-        surpriseNote: surprise.note || '',
+        surpriseBadge: safeSurprise.badge || 'A Little Surprise For You',
+        surpriseTitle: safeSurprise.title || 'One Last Promise...',
+        surpriseMessage: safeSurprise.message || '',
+        surpriseVoucher: safeSurprise.voucher || '',
+        surpriseNote: safeSurprise.note || '',
         reasons: {
-          create: reasons.map((r, idx) => ({
+          create: safeReasons.map((r, idx) => ({
             number: r.number || `0${idx + 1}`,
             title: r.title || `Special Reason ${idx + 1}`,
             text: r.text || '',
@@ -76,18 +80,18 @@ export async function createDraft(req, res) {
           }))
         },
         memories: {
-          create: memories.map((m, idx) => ({
+          create: safeMemories.map((m, idx) => ({
             date: m.date || '',
             title: m.title || '',
             description: m.description || '',
-            photoId: m.photoId || null,
+            photoId: null, // Initial draft has no persisted GiftPhoto records yet; linked safely in Step 4
             imageUrl: m.imageUrl || null,
             thumbnailUrl: m.thumbnailUrl || m.imageUrl || null,
             displayOrder: idx
           }))
         },
         funItems: {
-          create: funItems.map((f, idx) => ({
+          create: safeFunItems.map((f, idx) => ({
             question: f.question || '',
             answer: f.answer || '',
             displayOrder: idx
