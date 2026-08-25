@@ -1665,6 +1665,9 @@ export const CreatorPage = () => {
         }
 
         @media (max-width: 640px) {
+          .creator-step-card {
+            padding: clamp(1.25rem, 4vw, 1.75rem) clamp(0.875rem, 3.5vw, 1.25rem);
+          }
           .form-grid {
             grid-template-columns: 1fr;
           }
@@ -1674,8 +1677,36 @@ export const CreatorPage = () => {
           .themes-grid {
             grid-template-columns: 1fr;
           }
+          .step-actions,
+          .preview-actions {
+            flex-direction: column-reverse;
+            width: 100%;
+            gap: 10px;
+          }
+          .step-actions .btn,
+          .preview-actions .btn {
+            width: 100%;
+            justify-content: center;
+          }
           .completion-actions {
             flex-direction: column;
+            width: 100%;
+          }
+          .completion-actions .btn {
+            width: 100%;
+            justify-content: center;
+          }
+          .gift-link-box {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 8px;
+          }
+          .link-text {
+            text-align: center;
+          }
+          .gift-link-box .copy-btn {
+            width: 100%;
+            justify-content: center;
           }
         }
       `}</style>

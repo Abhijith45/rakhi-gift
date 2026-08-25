@@ -19,9 +19,19 @@ export const GiftHero = ({
   const relationship = (gift?.relationship || 'Sibling').toLowerCase();
 
   const handleScrollToWall = () => {
-    const wallEl = document.getElementById('memory-wall-section') || document.querySelector('.gift-wall-section');
+    const wallEl =
+      document.getElementById('memory-wall') ||
+      document.getElementById('memory-wall-section') ||
+      document.querySelector('.gift-wall-section');
     if (wallEl) {
-      wallEl.scrollIntoView({ behavior: 'smooth' });
+      const prefersReducedMotion =
+        typeof window !== 'undefined' &&
+        window.matchMedia &&
+        window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      wallEl.scrollIntoView({
+        behavior: prefersReducedMotion ? 'auto' : 'smooth',
+        block: 'start'
+      });
     }
   };
 

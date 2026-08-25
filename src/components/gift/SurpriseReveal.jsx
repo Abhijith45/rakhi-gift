@@ -165,7 +165,7 @@ export const SurpriseReveal = ({
         .surprise-header {
           text-align: center;
           max-width: 680px;
-          margin: 0 auto var(--space-8, 2rem) auto;
+          margin: 0 auto var(--space-6, 1.5rem) auto;
         }
 
         .surprise-tag {
@@ -214,7 +214,7 @@ export const SurpriseReveal = ({
         .surprise-stage-wrapper {
           max-width: 720px;
           margin: 0 auto;
-          padding: clamp(2rem, 5vw, 3.5rem);
+          padding: clamp(1.75rem, 5vw, 3.25rem) clamp(1rem, 4vw, 2.5rem);
           background: var(--gift-surface, #FFFDF9);
           border: 1px solid var(--gift-border, #E5D9C8);
           border-radius: var(--radius-lg, 12px);

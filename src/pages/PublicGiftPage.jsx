@@ -249,16 +249,23 @@ export const PublicGiftPage = () => {
           flex-direction: column;
           align-items: center;
           justify-content: center;
-          padding-top: var(--space-20, 4rem);
-          padding-bottom: var(--space-10, 2.5rem);
+          padding-top: var(--space-16, 4rem);
+          padding-bottom: var(--space-8, 2rem);
           position: relative;
+        }
+
+        @media (max-width: 640px) {
+          .gift-wall-section {
+            padding-top: var(--space-12, 3rem);
+            padding-bottom: var(--space-6, 1.5rem);
+          }
         }
 
         /* Surprise Section */
         .surprise-stage-wrapper {
           max-width: 680px;
           margin: 0 auto;
-          padding: clamp(2rem, 5vw, 3.5rem);
+          padding: clamp(1.75rem, 5vw, 3.5rem);
           text-align: center;
         }
 
@@ -272,46 +279,51 @@ export const PublicGiftPage = () => {
           display: flex;
           align-items: center;
           justify-content: center;
-          padding: var(--space-4);
+          padding: clamp(0.75rem, 3vw, 1.5rem);
         }
 
         .qr-modal-card {
           max-width: 440px;
           width: 100%;
-          padding: var(--space-8);
+          padding: clamp(1.5rem, 4vw, 2rem);
           text-align: center;
           box-shadow: var(--shadow-xl);
+          max-height: 90vh;
+          overflow-y: auto;
         }
 
         .qr-modal-title {
-          font-size: 1.4rem;
+          font-size: clamp(1.2rem, 3vw, 1.4rem);
           margin-bottom: var(--space-2);
         }
 
         .qr-modal-sub {
           font-size: var(--text-xs);
           color: var(--text-secondary);
-          margin-bottom: var(--space-6);
+          margin-bottom: var(--space-4);
         }
 
         .qr-modal-img-wrap {
           background: #FFFFFF;
-          padding: var(--space-3);
+          padding: var(--space-2);
           border-radius: var(--radius-md);
           display: inline-block;
-          margin-bottom: var(--space-6);
+          margin-bottom: var(--space-5);
           border: 1px solid var(--border-default);
         }
 
         .qr-modal-img {
-          width: 200px;
-          height: 200px;
+          width: clamp(140px, 45vw, 200px);
+          height: auto;
+          aspect-ratio: 1 / 1;
+          display: block;
         }
 
         .qr-modal-actions {
           display: flex;
           align-items: center;
           justify-content: center;
+          flex-wrap: wrap;
           gap: var(--space-3);
         }
 

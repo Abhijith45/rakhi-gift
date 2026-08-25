@@ -396,18 +396,47 @@ img, svg {
   margin-left: 2px;
 }
 
+/* Section Scroll Anchor Offsets for Fixed Headers */
+section[id],
+div[id],
+[id$="-section"],
+.gift-wall-section,
+.gift-hero-section,
+.gift-message-section,
+.gift-reasons-section,
+.gift-timeline-section,
+.gift-fun-section,
+.gift-surprise-section,
+.gift-wish-section,
+.gift-share-section {
+  scroll-margin-top: calc(var(--header-height, 64px) + 8px);
+}
+
+/* Reduced Motion for Accessibility */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto !important;
+  }
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 /* Responsive Padding Adjustment */
 @media (max-width: 640px) {
   .container,
   .container-narrow,
   .container-wide {
-    padding-left: var(--space-4);
-    padding-right: var(--space-4);
+    padding-left: clamp(0.75rem, 3.5vw, 1rem);
+    padding-right: clamp(0.75rem, 3.5vw, 1rem);
   }
 
   .section {
-    padding-top: var(--space-12);
-    padding-bottom: var(--space-12);
+    padding-top: var(--space-8);
+    padding-bottom: var(--space-8);
   }
 
   .btn-full-mobile,

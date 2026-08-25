@@ -241,8 +241,8 @@ export const MemoryTimeline = ({
           display: flex;
           align-items: center;
           justify-content: center;
-          padding-top: var(--space-10, 2.5rem);
-          padding-bottom: var(--space-12, 3rem);
+          padding-top: var(--space-8, 2rem);
+          padding-bottom: var(--space-8, 2rem);
           position: relative;
           background: transparent;
         }
@@ -251,13 +251,13 @@ export const MemoryTimeline = ({
           max-width: 920px;
           width: 100%;
           margin: 0 auto;
-          padding: 0 1.5rem;
+          padding: 0 clamp(0.75rem, 3.5vw, 1.5rem);
         }
 
         .timeline-header {
           text-align: center;
           max-width: 680px;
-          margin: 0 auto var(--space-8, 2.25rem) auto;
+          margin: 0 auto var(--space-6, 1.5rem) auto;
         }
 
         .timeline-tag {
@@ -613,14 +613,18 @@ export const MemoryTimeline = ({
 
         /* --- Responsive Viewports --- */
         @media (max-width: 768px) {
+          .timeline-track-wrapper {
+            overflow-x: clip;
+          }
+
           .timeline-thread-base,
           .timeline-thread-progress {
-            left: 20px;
+            left: clamp(14px, 4vw, 20px);
             transform: none;
           }
 
           .row-left, .row-right {
-            padding-left: 48px;
+            padding-left: clamp(34px, 9vw, 46px);
             padding-right: 0;
             justify-content: flex-start;
           }
@@ -630,7 +634,8 @@ export const MemoryTimeline = ({
             width: 100%;
             margin-left: 0;
             margin-right: 0;
-            transform: translate3d(28px, 24px, 0) scale(0.95) rotate(0.8deg);
+            padding: clamp(1.15rem, 3.5vw, 1.65rem);
+            transform: translate3d(24px, 18px, 0) scale(0.96) rotate(0.6deg);
           }
 
           .row-in-view .timeline-milestone-card {
@@ -638,12 +643,12 @@ export const MemoryTimeline = ({
           }
 
           .timeline-pin-node {
-            left: 20px;
-            transform: translate(-50%, -50%) scale(0.9);
+            left: clamp(14px, 4vw, 20px);
+            transform: translate(-50%, -50%) scale(0.88);
           }
 
           .timeline-pin-node.pin-node-active {
-            transform: translate(-50%, -50%) scale(1.1);
+            transform: translate(-50%, -50%) scale(1.05);
           }
         }
 
