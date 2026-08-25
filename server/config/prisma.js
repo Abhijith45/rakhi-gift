@@ -27,6 +27,32 @@ export async function initDatabaseConnection() {
     await prisma.$connect();
     console.log('✅ Connected to PostgreSQL database successfully.');
 
+    // Ensure all required columns and tables exist (Self-healing schema migration)
+    try {
+      await prisma.$executeRawUnsafe('ALTER TABLE "GiftMemory" ADD COLUMN IF NOT EXISTS "photoId" TEXT');
+      await prisma.$executeRawUnsafe('ALTER TABLE "GiftMemory" ADD COLUMN IF NOT EXISTS "imageUrl" TEXT');
+      await prisma.$executeRawUnsafe('ALTER TABLE "GiftMemory" ADD COLUMN IF NOT EXISTS "thumbnailUrl" TEXT');
+      await prisma.$executeRawUnsafe('ALTER TABLE "GiftMemory" ADD COLUMN IF NOT EXISTS "cloudinaryPublicId" TEXT');
+
+      await prisma.$executeRawUnsafe(`
+        CREATE TABLE IF NOT EXISTS "GiftFunItem" (
+            "id" TEXT NOT NULL,
+            "giftId" TEXT NOT NULL,
+            "question" TEXT NOT NULL,
+            "answer" TEXT NOT NULL,
+            "displayOrder" INTEGER NOT NULL DEFAULT 0,
+            CONSTRAINT "GiftFunItem_pkey" PRIMARY KEY ("id")
+        )
+      `);
+
+      await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "GiftMemory_photoId_idx" ON "GiftMemory"("photoId")');
+      await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "GiftFunItem_giftId_idx" ON "GiftFunItem"("giftId")');
+      await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "GiftFunItem_displayOrder_idx" ON "GiftFunItem"("displayOrder")');
+      console.log('✅ Schema self-healing verified (GiftMemory columns & GiftFunItem table).');
+    } catch (migErr) {
+      console.warn('⚠️ Non-critical schema self-healing warning:', migErr.message);
+    }
+
     // Seed default demo gift if table is empty
     const count = await prisma.gift.count();
     if (count === 0) {
