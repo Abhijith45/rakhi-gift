@@ -1,12 +1,16 @@
 import Razorpay from 'razorpay';
 import crypto from 'crypto';
 
-const keyId = process.env.RAZORPAY_KEY_ID;
-const keySecret = process.env.RAZORPAY_KEY_SECRET;
-const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
+const sanitizeEnv = (val) => (val ? String(val).trim().replace(/^["']|["']$/g, '') : '');
+
+const keyId = sanitizeEnv(process.env.RAZORPAY_KEY_ID);
+const keySecret = sanitizeEnv(process.env.RAZORPAY_KEY_SECRET);
+const webhookSecret = sanitizeEnv(process.env.RAZORPAY_WEBHOOK_SECRET);
 
 if (!keyId || !keySecret) {
   console.warn('[Razorpay] WARNING: RAZORPAY_KEY_ID or RAZORPAY_KEY_SECRET is not configured. Payment features will be unavailable.');
+} else {
+  console.log(`[Razorpay] Configured with Key ID: ${keyId.substring(0, 10)}... (mode: ${keyId.startsWith('rzp_live') ? 'LIVE' : 'TEST'})`);
 }
 
 if (!webhookSecret) {
@@ -86,7 +90,7 @@ export async function createRazorpayOrder({ plan = 'PREMIUM', receiptId, giftId 
       amount: planConfig.amount,  // In INR for display
       amountInPaise,              // In paise — exact value locked by server
       currency: 'INR',
-      keyId: process.env.RAZORPAY_KEY_ID,
+      keyId: keyId,
       planName: planConfig.name,
       planDescription: planConfig.description
     };
