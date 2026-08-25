@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   ZoomIn,
   ZoomOut,
@@ -9,14 +9,13 @@ import {
   Move,
   Maximize2,
   Minimize2,
-  Sparkles,
   Sliders
 } from 'lucide-react';
 import Button from '../../common/Button';
 import {
   loadImage,
   generateComposedImage,
-  calculateCompositionBounds,
+  drawCompositionOnCanvas,
   getDefaultComposition
 } from '../../../utils/imageCrop';
 
@@ -28,33 +27,58 @@ export const ImageCropper = ({
   onSave,
   onCancel
 }) => {
-  const [mode, setMode] = useState(initialParams.mode || 'fit'); // 'fit' | 'fill'
+  const [mode, setMode] = useState(initialParams.mode || 'fit'); // 'fit' (default) | 'fill'
   const [zoom, setZoom] = useState(initialParams.zoom !== undefined ? initialParams.zoom : 1.0);
   const [panX, setPanX] = useState(initialParams.panX || 0);
   const [panY, setPanY] = useState(initialParams.panY || 0);
   const [rotation, setRotation] = useState(initialParams.rotation || 0);
   const [caption, setCaption] = useState(initialCaption || '');
   const [isProcessing, setIsProcessing] = useState(false);
-  const [naturalSize, setNaturalSize] = useState({ width: 1600, height: 1200 });
+  const [isImageReady, setIsImageReady] = useState(false);
 
   const [isDragging, setIsDragging] = useState(false);
   const dragStartRef = useRef({ x: 0, y: 0, initialPanX: 0, initialPanY: 0 });
-  const viewportRef = useRef(null);
+  const canvasRef = useRef(null);
+  const imageElementRef = useRef(null);
 
-  // Load natural image dimensions for accurate CSS preview calculations
+  // Load the source image into memory once
   useEffect(() => {
     let isMounted = true;
+    setIsImageReady(false);
+
     loadImage(imageSrc)
       .then((img) => {
         if (isMounted) {
-          setNaturalSize({ width: img.naturalWidth, height: img.naturalHeight });
+          imageElementRef.current = img;
+          setIsImageReady(true);
         }
       })
-      .catch((err) => console.warn('Could not load image dimensions for preview:', err));
+      .catch((err) => {
+        console.error('Failed to load image for composition editor:', err);
+      });
+
     return () => {
       isMounted = false;
     };
   }, [imageSrc]);
+
+  // Redraw interactive 4:3 canvas preview whenever composition parameters change
+  const redrawCanvas = useCallback(() => {
+    if (!canvasRef.current || !imageElementRef.current) return;
+    drawCompositionOnCanvas(canvasRef.current, imageElementRef.current, {
+      mode,
+      zoom,
+      panX,
+      panY,
+      rotation
+    });
+  }, [mode, zoom, panX, panY, rotation]);
+
+  useEffect(() => {
+    if (isImageReady) {
+      redrawCanvas();
+    }
+  }, [isImageReady, redrawCanvas]);
 
   // Keyboard accessibility (Escape to close)
   useEffect(() => {
@@ -144,7 +168,7 @@ export const ImageCropper = ({
   const handleSave = async () => {
     try {
       setIsProcessing(true);
-      const imgElement = await loadImage(imageSrc);
+      const imgElement = imageElementRef.current || (await loadImage(imageSrc));
       const compositionParams = { mode, zoom, panX, panY, rotation };
       const composedResult = await generateComposedImage(imgElement, compositionParams);
 
@@ -164,19 +188,6 @@ export const ImageCropper = ({
       setIsProcessing(false);
     }
   };
-
-  // Compute live visual bounds matching HTML5 canvas composition
-  const previewBounds = calculateCompositionBounds({
-    naturalWidth: naturalSize.width,
-    naturalHeight: naturalSize.height,
-    mode,
-    zoom,
-    panX,
-    panY,
-    rotation,
-    canvasWidth: 800,
-    canvasHeight: 600
-  });
 
   return (
     <div
@@ -218,11 +229,18 @@ export const ImageCropper = ({
         {/* Outer Workspace containing the 4:3 White Canvas */}
         <div className="cropper-workspace">
           <div
-            ref={viewportRef}
             className={`cropper-canvas-frame ${isDragging ? 'is-dragging' : ''}`}
             onMouseDown={handleMouseDown}
             onTouchStart={handleTouchStart}
           >
+            {/* Interactive 4:3 Canvas Rendering (Pixel-identical to export) */}
+            <canvas
+              ref={canvasRef}
+              width={800}
+              height={600}
+              className="cropper-canvas-element"
+            />
+
             {/* Rule of Thirds Overlay Grid (visible during drag) */}
             <div className={`cropper-grid-overlay ${isDragging ? 'visible' : ''}`}>
               <span className="grid-line h h1" />
@@ -230,35 +248,16 @@ export const ImageCropper = ({
               <span className="grid-line v v1" />
               <span className="grid-line v v2" />
             </div>
+          </div>
 
-            <span className="canvas-aspect-badge">4:3 Memory Frame</span>
-
-            {/* Transformed Image Preview inside White 4:3 Canvas */}
-            <div
-              className="canvas-image-layer"
-              style={{
-                transform: `translate(${previewBounds.clampedOffsetX / 8}%, ${previewBounds.clampedOffsetY / 6}%)`
-              }}
-            >
-              <img
-                src={imageSrc}
-                alt="Adjusted Memory Preview"
-                className="cropper-preview-img"
-                style={{
-                  width: `${(previewBounds.originalDrawWidth / 800) * 100}%`,
-                  height: `${(previewBounds.originalDrawHeight / 600) * 100}%`,
-                  transform: `rotate(${previewBounds.normalizedRotation}deg)`,
-                  transformOrigin: 'center center'
-                }}
-                draggable={false}
-              />
-            </div>
+          <div className="workspace-subtle-bar">
+            <span className="subtle-frame-tag">Final frame · 4:3</span>
           </div>
         </div>
 
-        {/* Drag Hint */}
+        {/* Contextual Hint */}
         <p className="cropper-hint-text">
-          <Move size={13} /> Drag to adjust position • Pure white background fills any open edges
+          <Move size={13} /> Your full photo is preserved in Fit mode • White background fills open edges
         </p>
 
         {/* Composition Controls Strip */}
@@ -269,7 +268,8 @@ export const ImageCropper = ({
               type="button"
               className={`mode-btn ${mode === 'fit' ? 'is-active' : ''}`}
               onClick={handleSetFit}
-              title="Fit entire photo with white borders where needed"
+              title="Show entire photo with white borders where needed"
+              aria-pressed={mode === 'fit'}
             >
               <Minimize2 size={13} />
               <span>Fit Photo</span>
@@ -278,7 +278,8 @@ export const ImageCropper = ({
               type="button"
               className={`mode-btn ${mode === 'fill' ? 'is-active' : ''}`}
               onClick={handleSetFill}
-              title="Fill entire 4:3 frame"
+              title="Fill entire 4:3 frame without white borders"
+              aria-pressed={mode === 'fill'}
             >
               <Maximize2 size={13} />
               <span>Fill Frame</span>
@@ -328,6 +329,7 @@ export const ImageCropper = ({
               className="tool-action-btn"
               onClick={handleRotate}
               title="Rotate 90° clockwise"
+              aria-label="Rotate photo 90 degrees"
             >
               <RotateCw size={13} />
               <span>Rotate</span>
@@ -337,6 +339,7 @@ export const ImageCropper = ({
               className="tool-action-btn"
               onClick={handleReset}
               title="Reset to default Fit"
+              aria-label="Reset photo adjustments to default fit"
             >
               <RefreshCw size={13} />
               <span>Reset</span>
@@ -486,16 +489,18 @@ export const ImageCropper = ({
           border-radius: var(--radius-md);
           padding: var(--space-3);
           display: flex;
+          flex-direction: column;
           align-items: center;
           justify-content: center;
+          gap: var(--space-2);
           overflow: hidden;
         }
 
         .cropper-canvas-frame {
           width: 100%;
-          max-width: 460px;
+          max-width: 480px;
           aspect-ratio: 4 / 3;
-          background: #FFFFFF; /* Mandatory pure white 4:3 background */
+          background: #FFFFFF; /* Pure white background for 4:3 canvas */
           position: relative;
           overflow: hidden;
           border-radius: 4px;
@@ -511,19 +516,27 @@ export const ImageCropper = ({
           cursor: grabbing;
         }
 
-        .canvas-aspect-badge {
-          position: absolute;
-          top: 8px;
-          right: 8px;
-          background: rgba(28, 25, 23, 0.75);
-          color: #FAF5EE;
-          font-size: 10px;
-          font-weight: 600;
-          padding: 2px 8px;
-          border-radius: var(--radius-full);
-          backdrop-filter: blur(4px);
-          z-index: 10;
+        .cropper-canvas-element {
+          width: 100%;
+          height: 100%;
+          object-fit: contain;
+          background: #FFFFFF;
+          display: block;
+          user-select: none;
           pointer-events: none;
+        }
+
+        .workspace-subtle-bar {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .subtle-frame-tag {
+          font-size: 11px;
+          color: #A8A29E;
+          font-weight: 500;
+          letter-spacing: 0.02em;
         }
 
         .cropper-grid-overlay {
@@ -541,7 +554,7 @@ export const ImageCropper = ({
 
         .grid-line {
           position: absolute;
-          background: rgba(212, 175, 55, 0.5);
+          background: rgba(212, 175, 55, 0.45);
         }
 
         .grid-line.h {
@@ -559,25 +572,6 @@ export const ImageCropper = ({
         }
         .grid-line.v1 { left: 33.333%; }
         .grid-line.v2 { left: 66.666%; }
-
-        .canvas-image-layer {
-          width: 100%;
-          height: 100%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          position: absolute;
-          inset: 0;
-          pointer-events: none;
-        }
-
-        .cropper-preview-img {
-          max-width: none;
-          max-height: none;
-          display: block;
-          user-select: none;
-          -webkit-user-drag: none;
-        }
 
         .cropper-hint-text {
           font-size: 11px;
@@ -620,7 +614,7 @@ export const ImageCropper = ({
           color: var(--color-stone-700);
           font-size: 11px;
           font-weight: 600;
-          padding: 4px 10px;
+          padding: 5px 11px;
           border-radius: var(--radius-sm);
           cursor: pointer;
           transition: all var(--transition-fast);

@@ -69,7 +69,7 @@ export function calculateCompositionBounds({
   let baseWidth, baseHeight;
 
   if (mode === 'fill') {
-    // COVER: Scale so canvas is completely covered
+    // COVER: Scale so canvas is completely covered without white space
     if (effectiveRatio > canvasRatio) {
       baseHeight = canvasHeight;
       baseWidth = baseHeight * effectiveRatio;
@@ -78,17 +78,19 @@ export function calculateCompositionBounds({
       baseHeight = baseWidth / effectiveRatio;
     }
   } else {
-    // FIT (Default): Scale so entire image fits inside canvas with letterbox/pillarbox
+    // FIT (Default): Scale so entire image fits inside canvas with white letterbox/pillarbox
     if (effectiveRatio > canvasRatio) {
+      // Wider than 4:3 (e.g. 16:9) -> fits full width, white top/bottom
       baseWidth = canvasWidth;
       baseHeight = baseWidth / effectiveRatio;
     } else {
+      // Taller than 4:3 (e.g. 9:16 portrait, 1:1 square) -> fits full height, white left/right
       baseHeight = canvasHeight;
       baseWidth = baseHeight * effectiveRatio;
     }
   }
 
-  // Apply zoom
+  // Apply user zoom (1.0 = exact fit/fill scale)
   const currentZoom = Math.max(0.5, Math.min(4.0, zoom));
   const drawWidth = baseWidth * currentZoom;
   const drawHeight = baseHeight * currentZoom;
@@ -117,32 +119,21 @@ export function calculateCompositionBounds({
 }
 
 /**
- * Generates a high-resolution 4:3 composed image on a solid white background (#FFFFFF)
- * @param {HTMLImageElement} image 
- * @param {object} compositionParams 
- * @returns {Promise<{ dataUrl: string, blob: Blob, width: number, height: number }>}
+ * Draws the composed image onto any HTML5 canvas context.
+ * Used for both real-time interactive editor preview and final 1600x1200 export.
  */
-export async function generateComposedImage(image, compositionParams = {}) {
-  const {
-    mode = 'fit',
-    zoom = 1.0,
-    panX = 0,
-    panY = 0,
-    rotation = 0
-  } = compositionParams;
+export function drawCompositionOnCanvas(canvas, image, compositionParams = {}) {
+  if (!canvas || !image) return;
 
-  const canvas = document.createElement('canvas');
-  canvas.width = OUTPUT_WIDTH;
-  canvas.height = OUTPUT_HEIGHT;
   const ctx = canvas.getContext('2d');
+  if (!ctx) return;
 
-  if (!ctx) {
-    throw new Error('Canvas 2D context unavailable.');
-  }
+  const width = canvas.width;
+  const height = canvas.height;
 
   // 1. Fill entire 4:3 canvas with solid pure white (#FFFFFF) — never black, never transparent
   ctx.fillStyle = '#FFFFFF';
-  ctx.fillRect(0, 0, OUTPUT_WIDTH, OUTPUT_HEIGHT);
+  ctx.fillRect(0, 0, width, height);
 
   // 2. Enable high quality multi-sampling smoothing
   ctx.imageSmoothingEnabled = true;
@@ -152,21 +143,21 @@ export async function generateComposedImage(image, compositionParams = {}) {
   const bounds = calculateCompositionBounds({
     naturalWidth: image.naturalWidth,
     naturalHeight: image.naturalHeight,
-    mode,
-    zoom,
-    panX,
-    panY,
-    rotation,
-    canvasWidth: OUTPUT_WIDTH,
-    canvasHeight: OUTPUT_HEIGHT
+    mode: compositionParams.mode || 'fit',
+    zoom: compositionParams.zoom !== undefined ? compositionParams.zoom : 1.0,
+    panX: compositionParams.panX || 0,
+    panY: compositionParams.panY || 0,
+    rotation: compositionParams.rotation || 0,
+    canvasWidth: width,
+    canvasHeight: height
   });
 
   ctx.save();
 
   // Translate to center of canvas + user pan offset
   ctx.translate(
-    OUTPUT_WIDTH / 2 + bounds.clampedOffsetX,
-    OUTPUT_HEIGHT / 2 + bounds.clampedOffsetY
+    width / 2 + bounds.clampedOffsetX,
+    height / 2 + bounds.clampedOffsetY
   );
 
   // Apply user rotation
@@ -184,8 +175,22 @@ export async function generateComposedImage(image, compositionParams = {}) {
   );
 
   ctx.restore();
+}
 
-  // 4. Export as optimized web-friendly image (JPEG at 0.92 quality)
+/**
+ * Generates a high-resolution 4:3 composed image on a solid white background (#FFFFFF)
+ * @param {HTMLImageElement} image 
+ * @param {object} compositionParams 
+ * @returns {Promise<{ dataUrl: string, blob: Blob, width: number, height: number }>}
+ */
+export async function generateComposedImage(image, compositionParams = {}) {
+  const canvas = document.createElement('canvas');
+  canvas.width = OUTPUT_WIDTH;
+  canvas.height = OUTPUT_HEIGHT;
+
+  drawCompositionOnCanvas(canvas, image, compositionParams);
+
+  // Export as optimized web-friendly image (JPEG at 0.92 quality)
   const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
 
   const blob = await new Promise((resolve) => {
@@ -197,7 +202,13 @@ export async function generateComposedImage(image, compositionParams = {}) {
     blob,
     width: OUTPUT_WIDTH,
     height: OUTPUT_HEIGHT,
-    compositionParams: { mode, zoom, panX, panY, rotation }
+    compositionParams: {
+      mode: compositionParams.mode || 'fit',
+      zoom: compositionParams.zoom !== undefined ? compositionParams.zoom : 1.0,
+      panX: compositionParams.panX || 0,
+      panY: compositionParams.panY || 0,
+      rotation: compositionParams.rotation || 0
+    }
   };
 }
 
@@ -212,6 +223,7 @@ export default {
   getDefaultComposition,
   getDefaultCrop,
   calculateCompositionBounds,
+  drawCompositionOnCanvas,
   generateComposedImage,
   generateCroppedImage
 };
