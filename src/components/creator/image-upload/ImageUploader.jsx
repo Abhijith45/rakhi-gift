@@ -5,14 +5,19 @@ import {
   AlertCircle,
   Eye,
   Loader2,
-  RefreshCw
+  RefreshCw,
+  Sliders
 } from 'lucide-react';
 import DropZone from './DropZone';
 import ImageCard from './ImageCard';
 import ImageCropper from './ImageCropper';
 import Button from '../../common/Button';
 import { validateBatchFiles, MAX_IMAGES } from '../../../utils/imageValidation';
-import { loadImage, getDefaultCrop, generateCroppedImage } from '../../../utils/imageCrop';
+import {
+  loadImage,
+  getDefaultComposition,
+  generateComposedImage
+} from '../../../utils/imageCrop';
 import { uploadGiftPhotos } from '../../../services/api';
 
 export const ImageUploader = ({
@@ -36,12 +41,14 @@ export const ImageUploader = ({
       const mapped = initialPhotos.map((p, idx) => ({
         id: p.id || `init-photo-${idx}`,
         previewUrl: p.imageUrl || p.url,
+        originalUrl: p.originalUrl || p.imageUrl || p.url,
         croppedDataUrl: p.imageUrl || p.url,
         caption: p.caption || '',
         date: p.date || '',
         status: p.cloudinaryPublicId ? 'UPLOADED' : 'READY',
         cloudinaryPublicId: p.cloudinaryPublicId || null,
         url: p.imageUrl || p.url,
+        compositionParams: p.compositionParams || p.cropParams || getDefaultComposition(),
         displayOrder: p.displayOrder !== undefined ? p.displayOrder : idx
       }));
       setPhotos(mapped);
@@ -55,6 +62,9 @@ export const ImageUploader = ({
         if (p.previewUrl && p.previewUrl.startsWith('blob:')) {
           URL.revokeObjectURL(p.previewUrl);
         }
+        if (p.originalUrl && p.originalUrl.startsWith('blob:') && p.originalUrl !== p.previewUrl) {
+          URL.revokeObjectURL(p.originalUrl);
+        }
       });
     };
   }, []);
@@ -66,12 +76,14 @@ export const ImageUploader = ({
         id: p.id,
         imageUrl: p.croppedDataUrl || p.previewUrl || p.url,
         url: p.url || p.croppedDataUrl || p.previewUrl,
+        originalUrl: p.originalUrl || p.url,
         cloudinaryPublicId: p.cloudinaryPublicId,
         caption: p.caption || null,
         date: p.date || null,
         frameVariant: p.caption ? 'caption' : 'classic',
         displayOrder: idx,
-        aspectRatio: 1.333
+        aspectRatio: 1.333,
+        compositionParams: p.compositionParams
       }));
       onChange(exportPhotos);
     }
@@ -80,7 +92,7 @@ export const ImageUploader = ({
   // Handle files selected via file input or drag-and-drop
   const handleFilesSelected = async (newFiles) => {
     setValidationErrors([]);
-    const { validFiles, errors } = validateBatchFiles(newFiles, photos.length);
+    const { validFiles, errors } = validateBatchFiles(newFiles, photos.length, maxPhotos);
 
     if (errors.length > 0) {
       setValidationErrors(errors);
@@ -96,17 +108,21 @@ export const ImageUploader = ({
 
       try {
         const imgElement = await loadImage(blobUrl);
-        const defaultCrop = getDefaultCrop(imgElement.naturalWidth, imgElement.naturalHeight);
-        const croppedResult = await generateCroppedImage(imgElement, defaultCrop);
+        const defaultComp = getDefaultComposition(imgElement.naturalWidth, imgElement.naturalHeight);
+        // Non-destructive initial 4:3 composition (Fit mode on pure white background)
+        const composedResult = await generateComposedImage(imgElement, defaultComp);
 
         newPhotoObjects.push({
           id: `local-photo-${Date.now()}-${i}-${Math.random().toString(36).substring(2, 6)}`,
           file,
           previewUrl: blobUrl,
-          croppedDataUrl: croppedResult.dataUrl,
-          croppedBlob: croppedResult.blob,
-          cropParams: defaultCrop,
+          originalUrl: blobUrl,
+          croppedDataUrl: composedResult.dataUrl,
+          croppedBlob: composedResult.blob,
+          compositionParams: defaultComp,
+          cropParams: defaultComp,
           caption: '',
+          date: '',
           status: 'READY',
           cloudinaryPublicId: null,
           url: null,
@@ -126,12 +142,12 @@ export const ImageUploader = ({
     notifyParent(updated);
   };
 
-  // Open Cropper modal for a specific photo
+  // Open Composition Editor modal for a specific photo
   const handleEditCrop = (photo) => {
     setCroppingPhoto(photo);
   };
 
-  // Save Crop edits
+  // Save Composition edits
   const handleSaveCrop = (cropResult) => {
     if (!croppingPhoto) return;
 
@@ -141,7 +157,8 @@ export const ImageUploader = ({
           ...p,
           croppedDataUrl: cropResult.croppedDataUrl,
           croppedBlob: cropResult.croppedBlob,
-          cropParams: cropResult.cropParams,
+          compositionParams: cropResult.compositionParams || cropResult.cropParams,
+          cropParams: cropResult.cropParams || cropResult.compositionParams,
           caption: cropResult.caption !== undefined ? cropResult.caption : p.caption,
           status: 'READY'
         };
@@ -248,7 +265,6 @@ export const ImageUploader = ({
       const res = await uploadGiftPhotos(giftId, { photos: payloadPhotos });
 
       if (res && Array.isArray(res)) {
-        // Match uploaded records
         const updated = photos.map((p, idx) => {
           const uploadedMatch = res.find((r) => r.displayOrder === p.displayOrder) || res[idx];
           if (uploadedMatch) {
@@ -278,23 +294,40 @@ export const ImageUploader = ({
       <DropZone
         onFilesSelected={handleFilesSelected}
         currentCount={photos.length}
-        maxCount={maxPhotos}
-        disabled={photos.length >= maxPhotos || isUploading}
+        maxPhotos={maxPhotos}
+        errors={validationErrors}
       />
 
-      {/* Validation Error Notices */}
-      {validationErrors.length > 0 && (
-        <div className="uploader-errors-list">
-          {validationErrors.map((err, idx) => (
-            <div key={idx} className="uploader-error-item">
-              <AlertCircle size={14} className="err-icon" />
-              <span>{err}</span>
+      {/* Upload Progress Bar if active */}
+      {isUploading && (
+        <div className="upload-progress-bar-card animate-fade-in" role="status" aria-live="polite">
+          <div className="progress-info-row">
+            <div className="progress-label">
+              <Loader2 size={14} className="spin-icon" />
+              <span>Saving photos to your keepsake ({uploadProgress.current}/{uploadProgress.total})...</span>
             </div>
-          ))}
+            <span>
+              {uploadProgress.total > 0
+                ? `${Math.round((uploadProgress.current / uploadProgress.total) * 100)}%`
+                : '0%'}
+            </span>
+          </div>
+          <div className="progress-track">
+            <div
+              className="progress-fill"
+              style={{
+                width: `${
+                  uploadProgress.total > 0
+                    ? (uploadProgress.current / uploadProgress.total) * 100
+                    : 0
+                }%`
+              }}
+            />
+          </div>
         </div>
       )}
 
-      {/* Photos Grid Area */}
+      {/* Arranged Photos Grid */}
       {photos.length > 0 && (
         <div className="uploaded-photos-section">
           <div className="photos-header-row">
@@ -303,7 +336,7 @@ export const ImageUploader = ({
                 Arranged Memories ({photos.length} of {maxPhotos})
               </h4>
               <p className="photos-grid-sub">
-                All photos are cropped to 4:3. Click any image to adjust crop or add captions.
+                All photos are composed into 4:3 memory frames. Click any photo or "Adjust Photo" to customize fit, zoom, or captions.
               </p>
             </div>
 
@@ -341,12 +374,13 @@ export const ImageUploader = ({
         </div>
       )}
 
-      {/* Active Crop Modal */}
+      {/* Active Photo Composition Modal */}
       {croppingPhoto && (
         <ImageCropper
-          imageSrc={croppingPhoto.previewUrl || croppingPhoto.croppedDataUrl}
-          initialParams={croppingPhoto.cropParams}
+          imageSrc={croppingPhoto.originalUrl || croppingPhoto.previewUrl || croppingPhoto.croppedDataUrl}
+          initialParams={croppingPhoto.compositionParams || croppingPhoto.cropParams}
           initialCaption={croppingPhoto.caption}
+          allowCaption={allowCaptions}
           onSave={handleSaveCrop}
           onCancel={() => setCroppingPhoto(null)}
         />
@@ -391,7 +425,7 @@ export const ImageUploader = ({
 
         .progress-fill {
           height: 100%;
-          background: var(--color-rakhi-red);
+          background: var(--color-rakhi-red, #C41E3A);
           border-radius: var(--radius-full);
           transition: width 0.3s ease;
         }
@@ -412,13 +446,13 @@ export const ImageUploader = ({
         .photos-grid-title {
           font-size: 1.05rem;
           font-weight: 700;
-          color: var(--text-primary);
+          color: var(--color-stone-900);
           margin: 0 0 2px 0;
         }
 
         .photos-grid-sub {
           font-size: var(--text-xs);
-          color: var(--text-muted);
+          color: var(--color-stone-500);
           margin: 0;
         }
 

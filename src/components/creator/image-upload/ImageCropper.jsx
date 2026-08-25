@@ -7,29 +7,54 @@ import {
   Check,
   X,
   Move,
-  Crop as CropIcon,
-  Sparkles
+  Maximize2,
+  Minimize2,
+  Sparkles,
+  Sliders
 } from 'lucide-react';
 import Button from '../../common/Button';
-import { loadImage, generateCroppedImage } from '../../../utils/imageCrop';
+import {
+  loadImage,
+  generateComposedImage,
+  calculateCompositionBounds,
+  getDefaultComposition
+} from '../../../utils/imageCrop';
 
 export const ImageCropper = ({
   imageSrc,
   initialParams = {},
   initialCaption = '',
+  allowCaption = true,
   onSave,
   onCancel
 }) => {
-  const [zoom, setZoom] = useState(initialParams.zoom || 1.0);
+  const [mode, setMode] = useState(initialParams.mode || 'fit'); // 'fit' | 'fill'
+  const [zoom, setZoom] = useState(initialParams.zoom !== undefined ? initialParams.zoom : 1.0);
   const [panX, setPanX] = useState(initialParams.panX || 0);
   const [panY, setPanY] = useState(initialParams.panY || 0);
   const [rotation, setRotation] = useState(initialParams.rotation || 0);
   const [caption, setCaption] = useState(initialCaption || '');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [naturalSize, setNaturalSize] = useState({ width: 1600, height: 1200 });
 
   const [isDragging, setIsDragging] = useState(false);
   const dragStartRef = useRef({ x: 0, y: 0, initialPanX: 0, initialPanY: 0 });
   const viewportRef = useRef(null);
+
+  // Load natural image dimensions for accurate CSS preview calculations
+  useEffect(() => {
+    let isMounted = true;
+    loadImage(imageSrc)
+      .then((img) => {
+        if (isMounted) {
+          setNaturalSize({ width: img.naturalWidth, height: img.naturalHeight });
+        }
+      })
+      .catch((err) => console.warn('Could not load image dimensions for preview:', err));
+    return () => {
+      isMounted = false;
+    };
+  }, [imageSrc]);
 
   // Keyboard accessibility (Escape to close)
   useEffect(() => {
@@ -40,7 +65,7 @@ export const ImageCropper = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [onCancel]);
 
-  // Drag Pan handlers
+  // Drag Pan handlers (Mouse)
   const handleMouseDown = (e) => {
     e.preventDefault();
     setIsDragging(true);
@@ -56,18 +81,17 @@ export const ImageCropper = ({
     if (!isDragging) return;
     const dx = e.clientX - dragStartRef.current.x;
     const dy = e.clientY - dragStartRef.current.y;
-    
-    // Scale pixel delta to percentage offset
-    const sensitivity = 0.25 / zoom;
-    setPanX(Math.max(-45, Math.min(45, dragStartRef.current.initialPanX + dx * sensitivity)));
-    setPanY(Math.max(-45, Math.min(45, dragStartRef.current.initialPanY + dy * sensitivity)));
+
+    const sensitivity = 0.22 / zoom;
+    setPanX(Math.max(-50, Math.min(50, dragStartRef.current.initialPanX + dx * sensitivity)));
+    setPanY(Math.max(-50, Math.min(50, dragStartRef.current.initialPanY + dy * sensitivity)));
   };
 
   const handleMouseUp = () => {
     setIsDragging(false);
   };
 
-  // Touch Drag Pan handlers for mobile
+  // Touch Drag Pan handlers (Mobile)
   const handleTouchStart = (e) => {
     if (e.touches.length === 1) {
       setIsDragging(true);
@@ -85,43 +109,74 @@ export const ImageCropper = ({
     const dx = e.touches[0].clientX - dragStartRef.current.x;
     const dy = e.touches[0].clientY - dragStartRef.current.y;
     const sensitivity = 0.25 / zoom;
-    setPanX(Math.max(-45, Math.min(45, dragStartRef.current.initialPanX + dx * sensitivity)));
-    setPanY(Math.max(-45, Math.min(45, dragStartRef.current.initialPanY + dy * sensitivity)));
+    setPanX(Math.max(-50, Math.min(50, dragStartRef.current.initialPanX + dx * sensitivity)));
+    setPanY(Math.max(-50, Math.min(50, dragStartRef.current.initialPanY + dy * sensitivity)));
   };
 
-  const handleReset = () => {
+  // Mode & Transform handlers
+  const handleSetFit = () => {
+    setMode('fit');
     setZoom(1.0);
     setPanX(0);
     setPanY(0);
-    setRotation(0);
+  };
+
+  const handleSetFill = () => {
+    setMode('fill');
+    setZoom(1.0);
+    setPanX(0);
+    setPanY(0);
+  };
+
+  const handleReset = () => {
+    const def = getDefaultComposition();
+    setMode(def.mode);
+    setZoom(def.zoom);
+    setPanX(def.panX);
+    setPanY(def.panY);
+    setRotation(def.rotation);
   };
 
   const handleRotate = () => {
     setRotation((prev) => (prev + 90) % 360);
   };
 
-  const handleApplyCrop = async () => {
+  const handleSave = async () => {
     try {
       setIsProcessing(true);
       const imgElement = await loadImage(imageSrc);
-      const cropParams = { zoom, panX, panY, rotation };
-      const croppedResult = await generateCroppedImage(imgElement, cropParams);
+      const compositionParams = { mode, zoom, panX, panY, rotation };
+      const composedResult = await generateComposedImage(imgElement, compositionParams);
 
       onSave({
-        croppedDataUrl: croppedResult.dataUrl,
-        croppedBlob: croppedResult.blob,
-        cropParams,
+        croppedDataUrl: composedResult.dataUrl,
+        croppedBlob: composedResult.blob,
+        cropParams: compositionParams,
+        compositionParams,
         caption: caption.trim() || null,
-        width: croppedResult.width,
-        height: croppedResult.height
+        width: composedResult.width,
+        height: composedResult.height
       });
     } catch (err) {
-      console.error('Crop processing failed:', err);
-      alert('Could not crop image. Please try again.');
+      console.error('Composition processing failed:', err);
+      alert('Could not compose photo. Please try again.');
     } finally {
       setIsProcessing(false);
     }
   };
+
+  // Compute live visual bounds matching HTML5 canvas composition
+  const previewBounds = calculateCompositionBounds({
+    naturalWidth: naturalSize.width,
+    naturalHeight: naturalSize.height,
+    mode,
+    zoom,
+    panX,
+    panY,
+    rotation,
+    canvasWidth: 800,
+    canvasHeight: 600
+  });
 
   return (
     <div
@@ -138,70 +193,115 @@ export const ImageCropper = ({
         {/* Modal Header */}
         <div className="cropper-header">
           <div className="cropper-title-wrap">
-            <CropIcon size={18} color="var(--color-rakhi-red)" />
-            <h3 id="cropper-title" className="cropper-title">
-              Crop & Position Memory (4:3)
-            </h3>
+            <div className="cropper-icon-badge">
+              <Sliders size={18} />
+            </div>
+            <div>
+              <h3 id="cropper-title" className="cropper-title">
+                Adjust Your Photo
+              </h3>
+              <p className="cropper-subtitle">
+                Move or zoom the photo to choose exactly what appears in the memory frame.
+              </p>
+            </div>
           </div>
           <button
             type="button"
             className="cropper-close-btn"
             onClick={onCancel}
-            aria-label="Close crop modal"
+            aria-label="Close photo editor"
           >
             <X size={18} />
           </button>
         </div>
 
-        {/* Interactive 4:3 Crop Viewport */}
-        <div
-          ref={viewportRef}
-          className={`cropper-viewport-frame ${isDragging ? 'is-dragging' : ''}`}
-          onMouseDown={handleMouseDown}
-          onTouchStart={handleTouchStart}
-        >
-          {/* Rule of Thirds Overlay Grid */}
-          <div className="cropper-grid-overlay">
-            <span className="grid-line h h1" />
-            <span className="grid-line h h2" />
-            <span className="grid-line v v1" />
-            <span className="grid-line v v2" />
-            <span className="crop-ratio-badge">4:3 Fixed Ratio</span>
-          </div>
+        {/* Outer Workspace containing the 4:3 White Canvas */}
+        <div className="cropper-workspace">
+          <div
+            ref={viewportRef}
+            className={`cropper-canvas-frame ${isDragging ? 'is-dragging' : ''}`}
+            onMouseDown={handleMouseDown}
+            onTouchStart={handleTouchStart}
+          >
+            {/* Rule of Thirds Overlay Grid (visible during drag) */}
+            <div className={`cropper-grid-overlay ${isDragging ? 'visible' : ''}`}>
+              <span className="grid-line h h1" />
+              <span className="grid-line h h2" />
+              <span className="grid-line v v1" />
+              <span className="grid-line v v2" />
+            </div>
 
-          {/* Transformed Image Preview */}
-          <img
-            src={imageSrc}
-            alt="Crop Preview"
-            className="cropper-preview-img"
-            style={{
-              transform: `scale(${zoom}) translate(${panX}%, ${panY}%) rotate(${rotation}deg)`
-            }}
-            draggable={false}
-          />
+            <span className="canvas-aspect-badge">4:3 Memory Frame</span>
+
+            {/* Transformed Image Preview inside White 4:3 Canvas */}
+            <div
+              className="canvas-image-layer"
+              style={{
+                transform: `translate(${previewBounds.clampedOffsetX / 8}%, ${previewBounds.clampedOffsetY / 6}%)`
+              }}
+            >
+              <img
+                src={imageSrc}
+                alt="Adjusted Memory Preview"
+                className="cropper-preview-img"
+                style={{
+                  width: `${(previewBounds.originalDrawWidth / 800) * 100}%`,
+                  height: `${(previewBounds.originalDrawHeight / 600) * 100}%`,
+                  transform: `rotate(${previewBounds.normalizedRotation}deg)`,
+                  transformOrigin: 'center center'
+                }}
+                draggable={false}
+              />
+            </div>
+          </div>
         </div>
 
+        {/* Drag Hint */}
         <p className="cropper-hint-text">
-          <Move size={12} /> Drag image to adjust position inside the 4:3 frame.
+          <Move size={13} /> Drag to adjust position • Pure white background fills any open edges
         </p>
 
-        {/* Toolbar Controls (Zoom, Rotate, Reset) */}
+        {/* Composition Controls Strip */}
         <div className="cropper-controls-strip">
+          {/* Quick Fit / Fill Modes */}
+          <div className="mode-toggle-group" role="group" aria-label="Composition Mode">
+            <button
+              type="button"
+              className={`mode-btn ${mode === 'fit' ? 'is-active' : ''}`}
+              onClick={handleSetFit}
+              title="Fit entire photo with white borders where needed"
+            >
+              <Minimize2 size={13} />
+              <span>Fit Photo</span>
+            </button>
+            <button
+              type="button"
+              className={`mode-btn ${mode === 'fill' ? 'is-active' : ''}`}
+              onClick={handleSetFill}
+              title="Fill entire 4:3 frame"
+            >
+              <Maximize2 size={13} />
+              <span>Fill Frame</span>
+            </button>
+          </div>
+
+          {/* Zoom Slider */}
           <div className="zoom-control-group">
             <button
               type="button"
-              className="tool-btn"
-              onClick={() => setZoom((z) => Math.max(1.0, z - 0.1))}
-              disabled={zoom <= 1.0}
+              className="tool-icon-btn"
+              onClick={() => setZoom((z) => Math.max(0.6, parseFloat((z - 0.1).toFixed(2))))}
+              disabled={zoom <= 0.6}
               title="Zoom Out"
+              aria-label="Zoom out"
             >
               <ZoomOut size={15} />
             </button>
 
             <input
               type="range"
-              min="1"
-              max="3"
+              min="0.6"
+              max="3.0"
               step="0.05"
               value={zoom}
               onChange={(e) => setZoom(parseFloat(e.target.value))}
@@ -211,52 +311,59 @@ export const ImageCropper = ({
 
             <button
               type="button"
-              className="tool-btn"
-              onClick={() => setZoom((z) => Math.min(3.0, z + 0.1))}
+              className="tool-icon-btn"
+              onClick={() => setZoom((z) => Math.min(3.0, parseFloat((z + 0.1).toFixed(2))))}
               disabled={zoom >= 3.0}
               title="Zoom In"
+              aria-label="Zoom in"
             >
               <ZoomIn size={15} />
             </button>
           </div>
 
-          <div className="action-buttons-group">
+          {/* Rotate & Reset */}
+          <div className="utility-buttons-group">
             <button
               type="button"
-              className="tool-btn"
+              className="tool-action-btn"
               onClick={handleRotate}
-              title="Rotate 90°"
+              title="Rotate 90° clockwise"
             >
-              <RotateCw size={14} />
+              <RotateCw size={13} />
               <span>Rotate</span>
             </button>
             <button
               type="button"
-              className="tool-btn"
+              className="tool-action-btn"
               onClick={handleReset}
-              title="Reset Crop"
+              title="Reset to default Fit"
             >
-              <RefreshCw size={14} />
+              <RefreshCw size={13} />
               <span>Reset</span>
             </button>
           </div>
         </div>
 
-        {/* Optional Caption Input */}
-        <div className="cropper-caption-section">
-          <div className="caption-label-row">
-            <label className="caption-label">Memory Caption (Optional)</label>
-            <span className="caption-counter">{caption.length}/80</span>
+        {/* Optional Caption Input (if allowed) */}
+        {allowCaption && (
+          <div className="cropper-caption-section">
+            <div className="caption-label-row">
+              <label className="caption-label" htmlFor="photo-caption-input">
+                Memory Caption (Optional)
+              </label>
+              <span className="caption-counter">{caption.length}/80</span>
+            </div>
+            <input
+              id="photo-caption-input"
+              type="text"
+              className="caption-input-field"
+              placeholder="e.g. Partners in crime ❤️, Summer trip 2019..."
+              value={caption}
+              onChange={(e) => setCaption(e.target.value)}
+              maxLength={80}
+            />
           </div>
-          <input
-            type="text"
-            className="caption-input-field"
-            placeholder="e.g. Partners in crime ❤️, Road trip 2022..."
-            value={caption}
-            onChange={(e) => setCaption(e.target.value)}
-            maxLength={80}
-          />
-        </div>
+        )}
 
         {/* Footer Actions */}
         <div className="cropper-footer-actions">
@@ -274,11 +381,11 @@ export const ImageCropper = ({
             type="button"
             variant="primary"
             size="md"
-            onClick={handleApplyCrop}
+            onClick={handleSave}
             disabled={isProcessing}
             icon={<Check size={16} />}
           >
-            {isProcessing ? 'Normalizing Image...' : 'Save 4:3 Crop'}
+            {isProcessing ? 'Saving Photo...' : 'Save Photo'}
           </Button>
         </div>
       </div>
@@ -287,10 +394,10 @@ export const ImageCropper = ({
         .image-cropper-backdrop {
           position: fixed;
           inset: 0;
-          background: rgba(28, 25, 23, 0.82);
+          background: rgba(28, 25, 23, 0.88);
           backdrop-filter: blur(8px);
           -webkit-backdrop-filter: blur(8px);
-          z-index: var(--z-modal-backdrop);
+          z-index: var(--z-modal-backdrop, 1000);
           display: flex;
           align-items: center;
           justify-content: center;
@@ -299,77 +406,142 @@ export const ImageCropper = ({
         }
 
         .image-cropper-card {
-          max-width: 580px;
           width: 100%;
+          max-width: 580px;
+          max-height: 94vh;
+          overflow-y: auto;
+          background: #FFFFFF;
+          border-radius: var(--radius-lg);
           padding: var(--space-6);
-          box-shadow: var(--shadow-xl);
-          animation: fadeInUp 0.25s var(--ease-soft);
+          box-shadow: 0 20px 45px rgba(0, 0, 0, 0.28);
+          display: flex;
+          flex-direction: column;
+          gap: var(--space-4);
+          position: relative;
         }
 
         .cropper-header {
           display: flex;
-          align-items: center;
+          align-items: flex-start;
           justify-content: space-between;
-          margin-bottom: var(--space-4);
+          gap: var(--space-3);
+          border-bottom: 1px solid #F0E8DC;
           padding-bottom: var(--space-3);
-          border-bottom: 1px solid var(--border-light);
         }
 
         .cropper-title-wrap {
           display: flex;
           align-items: center;
-          gap: var(--space-2);
+          gap: var(--space-3);
         }
 
-        .cropper-title {
-          font-size: 1.25rem;
-          color: var(--text-primary);
-          margin: 0;
-        }
-
-        .cropper-close-btn {
-          color: var(--text-muted);
-          background: transparent;
-          padding: 4px;
+        .cropper-icon-badge {
+          width: 38px;
+          height: 38px;
           border-radius: 50%;
+          background: #FAF3E8;
+          color: var(--color-rakhi-red, #C41E3A);
           display: flex;
           align-items: center;
           justify-content: center;
-          transition: all 0.2s;
+          flex-shrink: 0;
+        }
+
+        .cropper-title {
+          font-family: var(--font-heading);
+          font-size: var(--text-lg);
+          font-weight: 700;
+          color: var(--color-stone-900);
+          margin: 0;
+          line-height: 1.2;
+        }
+
+        .cropper-subtitle {
+          font-size: var(--text-xs);
+          color: var(--color-stone-500);
+          margin: 2px 0 0 0;
+        }
+
+        .cropper-close-btn {
+          background: none;
+          border: none;
+          color: var(--color-stone-400);
+          cursor: pointer;
+          padding: 6px;
+          border-radius: var(--radius-sm);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: all var(--transition-fast);
         }
 
         .cropper-close-btn:hover {
-          background: var(--bg-subtle);
-          color: var(--text-primary);
+          color: var(--color-stone-800);
+          background: #F5EFEB;
         }
 
-        /* 4:3 Aspect Ratio Viewport Frame */
-        .cropper-viewport-frame {
-          position: relative;
-          width: 100%;
-          aspect-ratio: 4 / 3;
+        /* 4:3 Canvas Workspace */
+        .cropper-workspace {
           background: #1C1917;
           border-radius: var(--radius-md);
+          padding: var(--space-3);
+          display: flex;
+          align-items: center;
+          justify-content: center;
           overflow: hidden;
-          cursor: grab;
-          border: 2px solid var(--color-gold);
-          box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.6);
         }
 
-        .cropper-viewport-frame.is-dragging {
+        .cropper-canvas-frame {
+          width: 100%;
+          max-width: 460px;
+          aspect-ratio: 4 / 3;
+          background: #FFFFFF; /* Mandatory pure white 4:3 background */
+          position: relative;
+          overflow: hidden;
+          border-radius: 4px;
+          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+          cursor: grab;
+          user-select: none;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .cropper-canvas-frame.is-dragging {
           cursor: grabbing;
+        }
+
+        .canvas-aspect-badge {
+          position: absolute;
+          top: 8px;
+          right: 8px;
+          background: rgba(28, 25, 23, 0.75);
+          color: #FAF5EE;
+          font-size: 10px;
+          font-weight: 600;
+          padding: 2px 8px;
+          border-radius: var(--radius-full);
+          backdrop-filter: blur(4px);
+          z-index: 10;
+          pointer-events: none;
         }
 
         .cropper-grid-overlay {
           position: absolute;
           inset: 0;
           pointer-events: none;
-          z-index: 10;
+          opacity: 0;
+          transition: opacity 0.15s ease;
+          z-index: 5;
+        }
+
+        .cropper-grid-overlay.visible {
+          opacity: 1;
         }
 
         .grid-line {
           position: absolute;
-          background: rgba(255, 255, 255, 0.25);
+          background: rgba(212, 175, 55, 0.5);
         }
 
         .grid-line.h {
@@ -377,64 +549,87 @@ export const ImageCropper = ({
           right: 0;
           height: 1px;
         }
-
-        .grid-line.h.h1 { top: 33.33%; }
-        .grid-line.h.h2 { top: 66.66%; }
+        .grid-line.h1 { top: 33.333%; }
+        .grid-line.h2 { top: 66.666%; }
 
         .grid-line.v {
           top: 0;
           bottom: 0;
           width: 1px;
         }
+        .grid-line.v1 { left: 33.333%; }
+        .grid-line.v2 { left: 66.666%; }
 
-        .grid-line.v.v1 { left: 33.33%; }
-        .grid-line.v.v2 { left: 66.66%; }
-
-        .crop-ratio-badge {
+        .canvas-image-layer {
+          width: 100%;
+          height: 100%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
           position: absolute;
-          top: 8px;
-          right: 8px;
-          background: rgba(28, 25, 23, 0.75);
-          color: #FFFDF9;
-          font-size: 10px;
-          font-weight: 700;
-          padding: 2px 8px;
-          border-radius: var(--radius-full);
-          border: 1px solid rgba(255, 255, 255, 0.2);
+          inset: 0;
+          pointer-events: none;
         }
 
         .cropper-preview-img {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
+          max-width: none;
+          max-height: none;
           display: block;
-          transform-origin: center center;
-          transition: transform 0.05s ease-out;
+          user-select: none;
+          -webkit-user-drag: none;
         }
 
         .cropper-hint-text {
+          font-size: 11px;
+          color: var(--color-stone-500);
           display: flex;
           align-items: center;
           justify-content: center;
           gap: 6px;
-          font-size: var(--text-xs);
-          color: var(--text-muted);
-          margin-top: 6px;
-          margin-bottom: var(--space-4);
+          margin: 0;
+          text-align: center;
         }
 
         /* Controls Strip */
         .cropper-controls-strip {
           display: flex;
+          flex-wrap: wrap;
           align-items: center;
           justify-content: space-between;
-          gap: var(--space-4);
-          background: var(--bg-surface);
-          border: 1px solid var(--border-default);
-          border-radius: var(--radius-md);
+          gap: var(--space-3);
+          background: #FAF6EF;
+          border: 1px solid #EAE0D0;
           padding: var(--space-3) var(--space-4);
-          margin-bottom: var(--space-4);
-          flex-wrap: wrap;
+          border-radius: var(--radius-md);
+        }
+
+        .mode-toggle-group {
+          display: flex;
+          background: #E8DFCE;
+          border-radius: var(--radius-sm);
+          padding: 2px;
+          gap: 2px;
+        }
+
+        .mode-btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+          background: none;
+          border: none;
+          color: var(--color-stone-700);
+          font-size: 11px;
+          font-weight: 600;
+          padding: 4px 10px;
+          border-radius: var(--radius-sm);
+          cursor: pointer;
+          transition: all var(--transition-fast);
+        }
+
+        .mode-btn.is-active {
+          background: #FFFFFF;
+          color: var(--color-rakhi-red, #C41E3A);
+          box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
 
         .zoom-control-group {
@@ -442,93 +637,141 @@ export const ImageCropper = ({
           align-items: center;
           gap: var(--space-2);
           flex: 1;
-          min-width: 180px;
+          min-width: 140px;
+          max-width: 200px;
+        }
+
+        .tool-icon-btn {
+          background: #FFFFFF;
+          border: 1px solid #D6C7AE;
+          color: var(--color-stone-700);
+          border-radius: var(--radius-sm);
+          padding: 4px;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: all var(--transition-fast);
+        }
+
+        .tool-icon-btn:hover:not(:disabled) {
+          background: #FDF9F2;
+          color: var(--color-rakhi-red);
+          border-color: var(--color-rakhi-red);
+        }
+
+        .tool-icon-btn:disabled {
+          opacity: 0.35;
+          cursor: not-allowed;
         }
 
         .zoom-slider {
           flex: 1;
-          accent-color: var(--color-gold);
+          accent-color: var(--color-rakhi-red, #C41E3A);
           cursor: pointer;
         }
 
-        .tool-btn {
+        .utility-buttons-group {
+          display: flex;
+          gap: var(--space-2);
+        }
+
+        .tool-action-btn {
           display: inline-flex;
           align-items: center;
-          gap: 5px;
+          gap: 4px;
           background: #FFFFFF;
-          border: 1px solid var(--border-default);
-          color: var(--text-primary);
-          padding: 5px 10px;
-          border-radius: var(--radius-sm);
-          font-size: var(--text-xs);
+          border: 1px solid #D6C7AE;
+          color: var(--color-stone-700);
+          font-size: 11px;
           font-weight: 600;
+          padding: 4px 10px;
+          border-radius: var(--radius-sm);
           cursor: pointer;
-          transition: all 0.2s;
+          transition: all var(--transition-fast);
         }
 
-        .tool-btn:hover:not(:disabled) {
+        .tool-action-btn:hover {
+          background: #FAF3E8;
+          color: var(--color-stone-900);
           border-color: var(--color-gold);
-          background: var(--bg-subtle);
-        }
-
-        .tool-btn:disabled {
-          opacity: 0.4;
-          cursor: not-allowed;
-        }
-
-        .action-buttons-group {
-          display: flex;
-          align-items: center;
-          gap: var(--space-2);
         }
 
         /* Caption Section */
         .cropper-caption-section {
-          margin-bottom: var(--space-5);
+          display: flex;
+          flex-direction: column;
+          gap: var(--space-1);
         }
 
         .caption-label-row {
           display: flex;
           align-items: center;
           justify-content: space-between;
-          margin-bottom: 4px;
-        }
-
-        .caption-label {
           font-size: var(--text-xs);
-          font-weight: 700;
-          color: var(--text-primary);
+          color: var(--color-stone-600);
+          font-weight: 500;
         }
 
         .caption-counter {
+          color: var(--color-stone-400);
           font-size: 11px;
-          color: var(--text-muted);
         }
 
         .caption-input-field {
           width: 100%;
           padding: 8px 12px;
-          font-size: var(--text-sm);
-          border: 1px solid var(--border-default);
-          border-radius: var(--radius-md);
-          background: #FFFFFF;
-          outline: none;
-          transition: border-color 0.2s;
+          font-size: var(--text-xs);
+          border: 1px solid #D6C7AE;
+          border-radius: var(--radius-sm);
+          background: #FFFDF9;
+          color: var(--color-stone-800);
+          transition: all var(--transition-fast);
         }
 
         .caption-input-field:focus {
+          outline: none;
           border-color: var(--color-gold);
-          box-shadow: 0 0 0 2px var(--color-gold-glow);
+          box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.15);
+          background: #FFFFFF;
         }
 
-        /* Footer */
+        /* Footer Actions */
         .cropper-footer-actions {
           display: flex;
           align-items: center;
           justify-content: flex-end;
           gap: var(--space-3);
-          padding-top: var(--space-3);
-          border-top: 1px solid var(--border-light);
+          border-top: 1px solid #F0E8DC;
+          padding-top: var(--space-4);
+          margin-top: var(--space-1);
+        }
+
+        /* Mobile full/near-full-screen optimization */
+        @media (max-width: 640px) {
+          .image-cropper-backdrop {
+            padding: 0;
+            align-items: flex-end;
+          }
+
+          .image-cropper-card {
+            max-width: 100%;
+            max-height: 96vh;
+            border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+            padding: var(--space-4);
+            padding-bottom: calc(var(--space-4) + env(safe-area-inset-bottom, 16px));
+          }
+
+          .cropper-controls-strip {
+            padding: var(--space-2);
+            gap: var(--space-2);
+          }
+
+          .zoom-control-group {
+            order: 3;
+            width: 100%;
+            max-width: 100%;
+          }
         }
       `}</style>
     </div>

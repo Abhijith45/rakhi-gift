@@ -587,10 +587,10 @@ export const CreatorPage = () => {
               <div className="photos-header">
                 <div>
                   <h3 className="card-title">
-                    Add & Crop Your Memories ({builderData.photos.length}/{activePlanConfig.maxPhotos})
+                    Add the moments you'd never want to forget ({builderData.photos.length}/{activePlanConfig.maxPhotos})
                   </h3>
                   <p className="card-subtitle">
-                    Select up to {activePlanConfig.maxPhotos} photos for your {activePlanConfig.name}. Each image is mounted onto the 3D connected Memory Wall.
+                    Add your favorite photos. Adjust how each one fits the 4:3 memory frame.
                   </p>
                 </div>
               </div>
