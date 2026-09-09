@@ -1,0 +1,15 @@
+# https://www.robotstxt.org/robotstxt.html
+User-agent: *
+Allow: /
+Allow: /faq
+Allow: /privacy-policy
+Allow: /terms-and-conditions
+
+# Protect Private Sibling Gifts from Search Engine Crawlers
+Disallow: /g/
+
+# Protect Administrative & API Surface
+Disallow: /admin/
+Disallow: /api/
+
+Sitemap: https://rakhigift.me/sitemap.xml

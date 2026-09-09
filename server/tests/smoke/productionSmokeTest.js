@@ -13,16 +13,15 @@
 import http from 'http';
 import crypto from 'crypto';
 import dotenv from 'dotenv';
-import prisma from '../config/prisma.js';
-import { PLAN_PRICING, createRazorpayOrder, generatePaymentSignature } from '../config/razorpay.js';
-
 import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-dotenv.config({ path: path.resolve(__dirname, '../.env') });
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
+dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
 
+import prisma from '../../config/prisma.js';
+import { PLAN_PRICING, createRazorpayOrder, generatePaymentSignature } from '../../config/razorpay.js';
 
 const BASE_URL = `http://localhost:${process.env.PORT || 5000}`;
 
