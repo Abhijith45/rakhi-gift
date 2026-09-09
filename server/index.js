@@ -13,6 +13,10 @@ import paymentRoutes from './routes/paymentRoutes.js';
 import analyticsRoutes from './routes/analyticsRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 
+import requestIdMiddleware from './middleware/requestIdMiddleware.js';
+import { authLimiter, paymentLimiter, giftDraftLimiter, apiLimiter } from './middleware/rateLimitMiddleware.js';
+import logger from './utils/logger.js';
+
 const app = express();
 const PORT = process.env.PORT || 5000;
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
@@ -20,6 +24,9 @@ const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 // Ensure uploads directory exists
 const uploadsDir = path.join(process.cwd(), 'uploads');
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+
+// Attach Request Correlation ID
+app.use(requestIdMiddleware);
 
 // Basic Security Headers Middleware
 app.disable('x-powered-by');
@@ -90,7 +97,13 @@ const healthHandler = (req, res) => {
 app.get('/health', healthHandler);
 app.get('/api/health', healthHandler);
 
-// API Routes
+// API Rate Limiting & Routes
+app.use('/api', apiLimiter);
+app.use('/api/admin/login', authLimiter);
+app.use('/api/payments/create-order', paymentLimiter);
+app.use('/api/payments/verify', paymentLimiter);
+app.use('/api/gifts/draft', giftDraftLimiter);
+
 app.use('/api/gifts', giftRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/analytics', analyticsRoutes);
@@ -109,7 +122,7 @@ app.use('/api/*', (req, res) => {
 
 // Global Error Handling Middleware (Sanitized for Production)
 app.use((err, req, res, next) => {
-  console.error('[Error] Unhandled server error:', err.message || err);
+  logger.error('Unhandled server error', { error: err.message || err, code: err.code }, req);
   res.status(err.status || 500).json({
     success: false,
     error: {
@@ -123,8 +136,8 @@ app.use((err, req, res, next) => {
 
 // Start Server & Connect Database
 const server = app.listen(PORT, async () => {
-  console.log(`🎁 Rakhi Gift Backend API running on http://localhost:${PORT}`);
-  console.log(`🔒 Health check available at http://localhost:${PORT}/health & /api/health`);
+  logger.info(`Rakhi Gift Backend API running on http://localhost:${PORT}`);
+  logger.info(`Health check available at http://localhost:${PORT}/health & /api/health`);
   await initDatabaseConnection();
 });
 

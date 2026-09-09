@@ -13,7 +13,7 @@
     "postinstall": "prisma generate --schema=server/prisma/schema.prisma",
     "db:migrate": "prisma migrate deploy --schema=server/prisma/schema.prisma",
     "db:generate": "prisma generate --schema=server/prisma/schema.prisma",
-    "test:smoke": "node server/utils/productionSmokeTest.js"
+    "test:smoke": "node server/tests/smoke/productionSmokeTest.js"
   },
   "dependencies": {
     "@prisma/client": "^6.4.1",
@@ -26,7 +26,6 @@
     "express": "^4.22.2",
     "jsonwebtoken": "^9.0.3",
     "lucide-react": "^0.477.0",
-    "math-intrinsics": "^1.1.0",
     "multer": "^1.4.5-lts.1",
     "pg": "^8.23.0",
     "prisma": "^6.4.1",

@@ -1,12 +1,12 @@
 import crypto from 'crypto';
-import prisma from '../config/prisma.js';
+import prisma from '../../config/prisma.js';
 import {
   createPaymentOrder,
   verifyPayment,
   webhookHandler,
   getPaymentStatus
-} from '../controllers/paymentController.js';
-import { generateUniqueGiftSlug } from './slugGenerator.js';
+} from '../../controllers/paymentController.js';
+import { generateUniqueGiftSlug } from '../../utils/slugGenerator.js';
 
 const WEBHOOK_SECRET = process.env.RAZORPAY_WEBHOOK_SECRET || 'webhook_mock_secret_2026';
 const KEY_SECRET = process.env.RAZORPAY_KEY_SECRET || '7VfGb0n1yUbiUcKULVvK7yuJ';
@@ -271,7 +271,6 @@ async function runPaymentTests() {
     const orderId8 = resOrder8.body.data.orderId;
 
     // Simulate browser crashed/closed immediately after payment without calling /verify
-    // Razorpay webhook arrives asynchronously:
     const webhookPayload8 = JSON.stringify({
       event: 'payment.captured',
       id: `evt_async_${Date.now()}`,

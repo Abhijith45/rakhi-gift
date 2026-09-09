@@ -1,0 +1,13 @@
+node_modules
+dist
+uploads
+scratch
+.git
+.agents
+.env
+.env.local
+server/.env
+server/.env.local
+*.log
+npm-debug.log*
+.DS_Store

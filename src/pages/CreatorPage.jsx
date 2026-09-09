@@ -41,6 +41,7 @@ import CreatorNavigation from '../components/creator/CreatorNavigation.jsx';
 import PackageSelector from '../components/creator/PackageSelector.jsx';
 import PreviewToolbar from '../components/creator/PreviewToolbar.jsx';
 import PersonalizeTabContainer from '../components/creator/personalize/PersonalizeTabContainer.jsx';
+import { DetailsStep, MessageStep } from '../components/creator/steps/index.js';
 
 import { useCreatorState } from '../hooks/useCreatorState.js';
 import { useCreatorDraft } from '../hooks/useCreatorDraft.js';
@@ -439,124 +440,16 @@ export const CreatorPage = () => {
           {/* ============================================================ */}
           {/* STEP 1: DETAILS (Brother -> Sister Focus) */}
           {/* ============================================================ */}
+          {/* ============================================================ */}
+          {/* STEP 1: DETAILS (Brother -> Sister Focus) */}
+          {/* ============================================================ */}
           {currentStepId === STEP_IDS.DETAILS && (
-            <div className="creator-step-card paper-card animate-fade-in">
-              <div className="step-badge-pill">
-                <Sparkles size={13} />
-                <span>Step 1 of 7 • Sibling Personalization</span>
-              </div>
-
-              <h3 className="card-title">Create a special Rakhi gift for your sister ❤️</h3>
-              <p className="card-subtitle">
-                Personalize who is giving and receiving this digital keepsake. These names are woven into the 3D memory wall, the sealed letter, and custom keepsake links.
-              </p>
-
-              <div className="form-grid">
-                {/* Brother's Name */}
-                <div className="form-group">
-                  <label className="form-label">
-                    <span>Brother's Name (Your Name) <span className="required-star">*</span></span>
-                  </label>
-                  <div className="input-wrapper">
-                    <User size={18} className="input-leading-icon" />
-                    <input
-                      type="text"
-                      className="form-input has-leading-icon"
-                      placeholder="e.g. Aarav"
-                      value={builderData.senderName}
-                      onChange={(e) => updateBuilderData({ senderName: e.target.value })}
-                      maxLength={32}
-                    />
-                  </div>
-                  <span className="input-helper-text">Appears on the gift letter sign-off & hero greeting</span>
-                </div>
-
-                {/* Brother's Nickname */}
-                <div className="form-group">
-                  <label className="form-label">
-                    <span>Brother's Nickname</span>
-                    <span className="optional-pill">Optional</span>
-                  </label>
-                  <div className="input-wrapper">
-                    <Smile size={18} className="input-leading-icon" />
-                    <input
-                      type="text"
-                      className="form-input has-leading-icon"
-                      placeholder="e.g. Bhai, Bhaiya, Sonu"
-                      value={builderData.senderNickname}
-                      onChange={(e) => updateBuilderData({ senderNickname: e.target.value })}
-                      maxLength={24}
-                    />
-                  </div>
-                  <span className="input-helper-text">Used for playful moments & banter</span>
-                </div>
-
-                {/* Sister's Name */}
-                <div className="form-group">
-                  <label className="form-label">
-                    <span>Sister's Name (Recipient) <span className="required-star">*</span></span>
-                  </label>
-                  <div className="input-wrapper">
-                    <Heart size={18} className="input-leading-icon icon-pink" />
-                    <input
-                      type="text"
-                      className="form-input has-leading-icon"
-                      placeholder="e.g. Ananya"
-                      value={builderData.recipientName}
-                      onChange={(e) => updateBuilderData({ recipientName: e.target.value })}
-                      maxLength={32}
-                    />
-                  </div>
-                  <span className="input-helper-text">Primary name displayed on the 3D wall & wax seal</span>
-                </div>
-
-                {/* Sister's Nickname */}
-                <div className="form-group">
-                  <label className="form-label">
-                    <span>Sister's Nickname</span>
-                    <span className="optional-pill">Optional</span>
-                  </label>
-                  <div className="input-wrapper">
-                    <Sparkles size={18} className="input-leading-icon icon-gold" />
-                    <input
-                      type="text"
-                      className="form-input has-leading-icon"
-                      placeholder="e.g. Chhoti, Golu, Didi"
-                      value={builderData.recipientNickname}
-                      onChange={(e) => updateBuilderData({ recipientNickname: e.target.value })}
-                      maxLength={24}
-                    />
-                  </div>
-                  <span className="input-helper-text">Affectionate name for the letter salutation</span>
-                </div>
-
-                {/* Email for Receipt & Backup */}
-                <div className="form-group full-width">
-                  <label className="form-label">
-                    <span>Your Email for Receipt & Link Backup</span>
-                    <span className="optional-pill">Recommended</span>
-                  </label>
-                  <div className="input-wrapper">
-                    <Mail size={18} className="input-leading-icon" />
-                    <input
-                      type="email"
-                      className="form-input has-leading-icon"
-                      placeholder="e.g. aarav@gmail.com"
-                      value={builderData.creatorEmail}
-                      onChange={(e) => updateBuilderData({ creatorEmail: e.target.value })}
-                    />
-                  </div>
-                  <span className="input-helper-text">We'll email you a permanent backup of your unique gift link and order receipt.</span>
-                </div>
-              </div>
-
-              <CreatorNavigation
-                isFirstStep={true}
-                onNext={handleNextWithSave}
-                nextText="Continue to Package"
-                loading={uiState.loading}
-              />
-            </div>
+            <DetailsStep
+              builderData={builderData}
+              updateBuilderData={updateBuilderData}
+              onNext={handleNextWithSave}
+              loading={uiState.loading}
+            />
           )}
 
           {/* ============================================================ */}
@@ -587,10 +480,10 @@ export const CreatorPage = () => {
               <div className="photos-header">
                 <div>
                   <h3 className="card-title">
-                    Add & Crop Your Memories ({builderData.photos.length}/{activePlanConfig.maxPhotos})
+                    Add the moments you'd never want to forget ({builderData.photos.length}/{activePlanConfig.maxPhotos})
                   </h3>
                   <p className="card-subtitle">
-                    Select up to {activePlanConfig.maxPhotos} photos for your {activePlanConfig.name}. Each image is mounted onto the 3D connected Memory Wall.
+                    Add your favorite photos. Adjust how each one fits the 4:3 memory frame.
                   </p>
                 </div>
               </div>
@@ -626,72 +519,18 @@ export const CreatorPage = () => {
           {/* ============================================================ */}
           {/* STEP 4: RAKHI LETTER (MESSAGE) */}
           {/* ============================================================ */}
+          {/* ============================================================ */}
+          {/* STEP 4: RAKHI LETTER (MESSAGE) */}
+          {/* ============================================================ */}
           {currentStepId === STEP_IDS.MESSAGE && (
-            <div className="creator-step-card paper-card animate-fade-in">
-              <div className="step-badge-pill">
-                <Feather size={13} />
-                <span>Step 4 of 7 • Sacred Rakhi Letter</span>
-              </div>
-
-              <h3 className="card-title">Write Your Heartfelt Rakhi Letter</h3>
-              <p className="card-subtitle">
-                An intimate editorial letter that opens with an interactive wax seal on your sister's gift page.
-              </p>
-
-              {/* Inspiration Prompt Chips */}
-              <div className="letter-prompts-section">
-                <span className="prompts-label">✨ Click an idea to add inspiration:</span>
-                <div className="prompt-chips-wrapper">
-                  {[
-                    "Thank you for always having my back no matter what.",
-                    "From fighting over the TV remote to celebrating every big milestone together...",
-                    "No matter how far apart we are, our bond remains unbreakable.",
-                    "Wishing you all the joy, health, and laughter in the world this Raksha Bandhan."
-                  ].map((prompt, pIdx) => (
-                    <button
-                      key={pIdx}
-                      type="button"
-                      className="prompt-chip"
-                      onClick={() => {
-                        const current = builderData.message.trim();
-                        const updated = current ? `${current}\n\n${prompt}` : prompt;
-                        if (updated.length <= 1200) {
-                          updateBuilderData({ message: updated });
-                        }
-                      }}
-                    >
-                      "{prompt.slice(0, 42)}..."
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="form-group letter-textarea-group">
-                <label className="form-label">
-                  <span>Message for {builderData.recipientNickname || builderData.recipientName || 'Sister'}</span>
-                  <span className={`char-counter-pill ${builderData.message.length > 1100 ? 'warning' : ''}`}>
-                    {builderData.message.length} / 1200 chars
-                  </span>
-                </label>
-                <div className="textarea-wrapper">
-                  <textarea
-                    className="form-textarea letter-textarea"
-                    rows={7}
-                    value={builderData.message}
-                    onChange={(e) => updateBuilderData({ message: e.target.value })}
-                    maxLength={1200}
-                    placeholder="Write what you want her to know — your favorite memories together, heartfelt gratitude, or a warm Rakhi blessing..."
-                  />
-                </div>
-              </div>
-
-              <CreatorNavigation
-                onBack={previousStep}
-                onNext={handleNextWithSave}
-                nextText={activePlanConfig.reasons ? "Continue to Personalize" : "Continue to Theme"}
-                loading={uiState.loading}
-              />
-            </div>
+            <MessageStep
+              builderData={builderData}
+              updateBuilderData={updateBuilderData}
+              activePlanConfig={activePlanConfig}
+              onBack={previousStep}
+              onNext={handleNextWithSave}
+              loading={uiState.loading}
+            />
           )}
 
           {/* ============================================================ */}

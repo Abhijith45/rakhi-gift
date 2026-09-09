@@ -1,15 +1,14 @@
 import React from 'react';
 import {
-  Crop as CropIcon,
+  Sliders,
   Trash2,
   ArrowUp,
   ArrowDown,
   CheckCircle2,
-  AlertTriangle,
   Loader2,
-  Check,
   XCircle,
-  MessageSquare
+  MessageSquare,
+  Calendar
 } from 'lucide-react';
 
 export const ImageCard = ({
@@ -30,7 +29,7 @@ export const ImageCard = ({
     croppedDataUrl,
     caption = '',
     date = '',
-    status = 'READY', // 'NEEDS_CROP' | 'READY' | 'UPLOADING' | 'UPLOADED' | 'FAILED'
+    status = 'READY',
     error = null
   } = photo;
 
@@ -44,29 +43,18 @@ export const ImageCard = ({
             <Loader2 size={11} className="spin-icon" /> Uploading...
           </span>
         );
-      case 'UPLOADED':
-        return (
-          <span className="status-badge status-uploaded">
-            <Check size={11} /> Saved to Cloud
-          </span>
-        );
       case 'FAILED':
         return (
           <span className="status-badge status-failed">
             <XCircle size={11} /> Upload Failed
           </span>
         );
-      case 'NEEDS_CROP':
-        return (
-          <span className="status-badge status-needs-crop">
-            <AlertTriangle size={11} /> Needs 4:3 Crop
-          </span>
-        );
+      case 'UPLOADED':
       case 'READY':
       default:
         return (
           <span className="status-badge status-ready">
-            <CheckCircle2 size={11} /> 4:3 Ready
+            <CheckCircle2 size={11} /> Ready
           </span>
         );
     }
@@ -94,8 +82,20 @@ export const ImageCard = ({
         </button>
       </div>
 
-      {/* 4:3 Cropped Thumbnail Viewport */}
-      <div className="photo-thumbnail-box" onClick={() => onEditCrop(photo)}>
+      {/* 4:3 Composed Thumbnail Viewport — Clickable to Adjust Photo */}
+      <div
+        className="photo-thumbnail-box"
+        onClick={() => onEditCrop(photo)}
+        role="button"
+        tabIndex={0}
+        aria-label={`Adjust photo ${index + 1}`}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            onEditCrop(photo);
+          }
+        }}
+      >
         <img
           src={displayImage}
           alt={`Memory ${index + 1}`}
@@ -105,12 +105,12 @@ export const ImageCard = ({
 
         {/* Hover overlay hint */}
         <div className="thumbnail-hover-overlay">
-          <CropIcon size={20} />
-          <span>Click to Adjust 4:3 Crop</span>
+          <Sliders size={20} />
+          <span>Adjust Photo</span>
         </div>
       </div>
 
-      {/* Caption & Date Inputs Area */}
+      {/* Caption & Date Inputs Area (Package-aware) */}
       <div className="card-bottom-content">
         {allowCaptions && (
           <div className="caption-input-container">
@@ -129,10 +129,11 @@ export const ImageCard = ({
 
         {allowDates && (
           <div className="caption-input-container date-input-container">
+            <Calendar size={13} className="caption-icon" />
             <input
               type="text"
               className="card-caption-input"
-              placeholder="Memory date (optional, e.g. Diwali 2019)"
+              placeholder="Memory date (optional, e.g. Summer 2018)"
               value={date}
               onChange={(e) => onDateChange && onDateChange(photo.id, e.target.value)}
               maxLength={24}
@@ -141,15 +142,16 @@ export const ImageCard = ({
           </div>
         )}
 
-        {/* Bottom Toolbar: Reorder & Edit Buttons */}
+        {/* Bottom Toolbar: Adjust Photo Action & Reorder Buttons */}
         <div className="card-actions-strip">
           <button
             type="button"
             className="btn-edit-crop"
             onClick={() => onEditCrop(photo)}
+            aria-label={`Adjust composition for photo ${index + 1}`}
           >
-            <CropIcon size={13} />
-            <span>Edit Crop</span>
+            <Sliders size={13} />
+            <span>Adjust Photo</span>
           </button>
 
           <div className="reorder-btn-group">
@@ -158,8 +160,8 @@ export const ImageCard = ({
               className="btn-reorder"
               onClick={() => onMoveUp(index)}
               disabled={index === 0}
-              title="Move earlier"
-              aria-label="Move photo earlier"
+              title="Move photo earlier"
+              aria-label={`Move photo ${index + 1} earlier`}
             >
               <ArrowUp size={13} />
             </button>
@@ -168,8 +170,8 @@ export const ImageCard = ({
               className="btn-reorder"
               onClick={() => onMoveDown(index)}
               disabled={index === total - 1}
-              title="Move later"
-              aria-label="Move photo later"
+              title="Move photo later"
+              aria-label={`Move photo ${index + 1} later`}
             >
               <ArrowDown size={13} />
             </button>
@@ -179,30 +181,31 @@ export const ImageCard = ({
 
       <style>{`
         .memory-image-card {
-          background: #FFFDF9;
-          border: 1px solid var(--border-default);
-          border-radius: var(--radius-lg);
-          padding: var(--space-3);
+          background: #FFFFFF;
+          border: 1px solid #EAE0D0;
+          border-radius: var(--radius-md);
+          overflow: hidden;
           box-shadow: var(--shadow-sm);
           display: flex;
           flex-direction: column;
-          gap: var(--space-2);
-          transition: all 0.2s var(--ease-soft);
+          transition: all var(--transition-normal);
           position: relative;
         }
 
         .memory-image-card:hover {
-          box-shadow: var(--shadow-md);
-          border-color: #D6C2A0;
           transform: translateY(-2px);
+          box-shadow: var(--shadow-md);
+          border-color: var(--color-gold-light, #E8D3A2);
         }
 
         .memory-image-card.has-error {
-          border-color: #FCA5A5;
-          background: #FEF2F2;
+          border-color: #EF4444;
         }
 
         .card-top-bar {
+          padding: var(--space-2) var(--space-3);
+          background: #FAF6EF;
+          border-bottom: 1px solid #F0E6D8;
           display: flex;
           align-items: center;
           justify-content: space-between;
@@ -210,20 +213,19 @@ export const ImageCard = ({
         }
 
         .card-order-chip {
-          background: #FAF5ED;
-          color: var(--text-secondary);
+          background: #E8DFCE;
+          color: var(--color-stone-700);
           font-size: 11px;
           font-weight: 700;
-          padding: 2px 7px;
+          padding: 2px 8px;
           border-radius: var(--radius-full);
-          border: 1px solid var(--border-light);
         }
 
         .status-badge {
           display: inline-flex;
           align-items: center;
           gap: 4px;
-          font-size: 10.5px;
+          font-size: 11px;
           font-weight: 600;
           padding: 2px 8px;
           border-radius: var(--radius-full);
@@ -231,31 +233,19 @@ export const ImageCard = ({
 
         .status-ready {
           background: #ECFDF5;
-          color: #047857;
+          color: #065F46;
           border: 1px solid #A7F3D0;
-        }
-
-        .status-needs-crop {
-          background: #FFFBEB;
-          color: #B45309;
-          border: 1px solid #FDE68A;
         }
 
         .status-uploading {
           background: #EFF6FF;
-          color: #1D4ED8;
+          color: #1E40AF;
           border: 1px solid #BFDBFE;
-        }
-
-        .status-uploaded {
-          background: #F0FDF4;
-          color: #15803D;
-          border: 1px solid #BBF7D0;
         }
 
         .status-failed {
           background: #FEF2F2;
-          color: #B91C1C;
+          color: #991B1B;
           border: 1px solid #FECACA;
         }
 
@@ -264,101 +254,112 @@ export const ImageCard = ({
         }
 
         .btn-remove-photo {
-          background: transparent;
-          color: var(--text-muted);
+          background: none;
           border: none;
-          padding: 6px;
-          min-width: 32px;
-          min-height: 32px;
-          border-radius: 6px;
+          color: var(--color-stone-400);
           cursor: pointer;
-          transition: all 0.2s;
+          padding: 4px;
+          border-radius: var(--radius-sm);
           display: flex;
           align-items: center;
           justify-content: center;
+          transition: color var(--transition-fast), background var(--transition-fast);
         }
 
         .btn-remove-photo:hover {
-          background: #FEE2E2;
           color: #DC2626;
+          background: #FEE2E2;
         }
 
-        /* 4:3 Aspect Ratio Viewport */
         .photo-thumbnail-box {
           position: relative;
           width: 100%;
           aspect-ratio: 4 / 3;
-          border-radius: var(--radius-md);
+          background: #FFFFFF;
           overflow: hidden;
-          background: var(--bg-subtle);
           cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-bottom: 1px solid #F0E6D8;
+        }
+
+        .photo-thumbnail-box:focus-visible {
+          outline: 2px solid var(--color-rakhi-red);
+          outline-offset: -2px;
         }
 
         .thumbnail-img {
           width: 100%;
           height: 100%;
-          object-fit: cover;
+          object-fit: contain;
+          background: #FFFFFF;
           display: block;
-          transition: transform 0.25s;
+          transition: transform var(--transition-normal);
+        }
+
+        .photo-thumbnail-box:hover .thumbnail-img {
+          transform: scale(1.02);
         }
 
         .thumbnail-hover-overlay {
           position: absolute;
           inset: 0;
-          background: rgba(28, 25, 23, 0.65);
-          color: #FFFFFF;
+          background: rgba(28, 25, 23, 0.72);
+          backdrop-filter: blur(2px);
+          color: #FFF;
           display: flex;
           flex-direction: column;
           align-items: center;
           justify-content: center;
           gap: 6px;
-          opacity: 0;
-          transition: opacity 0.2s;
           font-size: var(--text-xs);
           font-weight: 600;
-          backdrop-filter: blur(2px);
+          opacity: 0;
+          transition: opacity var(--transition-fast);
         }
 
         .photo-thumbnail-box:hover .thumbnail-hover-overlay {
           opacity: 1;
         }
 
-        .photo-thumbnail-box:hover .thumbnail-img {
-          transform: scale(1.04);
-        }
-
         .card-bottom-content {
+          padding: var(--space-3);
           display: flex;
           flex-direction: column;
           gap: var(--space-2);
+          flex: 1;
         }
 
         .caption-input-container {
+          position: relative;
           display: flex;
           align-items: center;
-          gap: 6px;
-          background: #FFFFFF;
-          border: 1px solid var(--border-default);
-          border-radius: var(--radius-sm);
-          padding: 4px 8px;
         }
 
         .caption-icon {
-          color: var(--text-muted);
-          flex-shrink: 0;
+          position: absolute;
+          left: 10px;
+          color: var(--color-stone-400);
+          pointer-events: none;
         }
 
         .card-caption-input {
           width: 100%;
-          border: none;
-          outline: none;
-          background: transparent;
+          padding: 6px 10px 6px 30px;
           font-size: var(--text-xs);
-          color: var(--text-primary);
+          border: 1px solid #E2D7C3;
+          border-radius: var(--radius-sm);
+          background: #FFFDF9;
+          color: var(--color-stone-800);
+          transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
         }
 
-        .card-caption-input::placeholder {
-          color: var(--text-muted);
+        .card-caption-input:focus {
+          outline: none;
+          border-color: var(--color-gold);
+          box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.15);
+          background: #FFF;
         }
 
         .card-actions-strip {
@@ -366,56 +367,55 @@ export const ImageCard = ({
           align-items: center;
           justify-content: space-between;
           gap: var(--space-2);
+          margin-top: auto;
+          padding-top: var(--space-1);
         }
 
         .btn-edit-crop {
           display: inline-flex;
           align-items: center;
-          gap: 5px;
-          background: #FAF5ED;
-          border: 1px solid var(--border-light);
-          color: var(--text-primary);
-          padding: 5px 10px;
-          min-height: 32px;
-          border-radius: var(--radius-sm);
-          font-size: 11.5px;
+          gap: 6px;
+          background: #FAF6EE;
+          border: 1px solid #D6C7AE;
+          color: var(--color-stone-800);
+          font-size: 11px;
           font-weight: 600;
+          padding: 4px 10px;
+          border-radius: var(--radius-sm);
           cursor: pointer;
-          transition: all 0.2s;
+          transition: all var(--transition-fast);
+          min-height: 28px;
         }
 
         .btn-edit-crop:hover {
-          background: var(--color-gold);
-          color: #FFFFFF;
-          border-color: var(--color-gold);
+          background: var(--color-gold, #D4AF37);
+          color: var(--color-stone-900);
+          border-color: var(--color-gold-dark, #B8860B);
         }
 
         .reorder-btn-group {
           display: flex;
-          align-items: center;
-          gap: 4px;
+          gap: 2px;
         }
 
         .btn-reorder {
-          background: #FFFFFF;
-          border: 1px solid var(--border-default);
-          color: var(--text-secondary);
-          width: 32px;
-          height: 32px;
-          min-width: 32px;
-          min-height: 32px;
+          background: #FAF6EE;
+          border: 1px solid #E2D7C3;
+          color: var(--color-stone-600);
+          padding: 4px 6px;
           border-radius: var(--radius-sm);
+          cursor: pointer;
           display: flex;
           align-items: center;
           justify-content: center;
-          cursor: pointer;
-          transition: all 0.2s;
+          transition: all var(--transition-fast);
+          min-width: 26px;
+          min-height: 26px;
         }
 
         .btn-reorder:hover:not(:disabled) {
-          background: var(--bg-subtle);
-          color: var(--text-primary);
-          border-color: var(--color-gold);
+          background: #E8DFCE;
+          color: var(--color-stone-900);
         }
 
         .btn-reorder:disabled {

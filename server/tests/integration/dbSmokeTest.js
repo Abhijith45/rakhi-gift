@@ -1,4 +1,4 @@
-import prisma from '../config/prisma.js';
+import prisma from '../../config/prisma.js';
 
 async function runPostgresSmokeTest() {
   console.log('🧪 Starting comprehensive PostgreSQL database integration test...\n');
